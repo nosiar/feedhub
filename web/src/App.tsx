@@ -1,8 +1,10 @@
+// web/src/App.tsx
 import { useState } from "react";
 import { useFeed } from "./hooks/useFeed.js";
 import { SourceFilter } from "./components/SourceFilter.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { FeedList } from "./components/FeedList.js";
+import { SettingsPage } from "./components/SettingsPage.js";
 import { triggerSync } from "./api.js";
 
 export function App() {
@@ -10,12 +12,13 @@ export function App() {
     useFeed();
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [view, setView] = useState<"feed" | "settings">("feed");
 
   const handleSync = async () => {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await triggerSync() as { results?: Record<string, number> };
+      const res = (await triggerSync()) as { results?: Record<string, number> };
       const total = res.results
         ? Object.values(res.results).reduce((a, b) => a + b, 0)
         : 0;
@@ -28,6 +31,14 @@ export function App() {
       setTimeout(() => setSyncResult(null), 3000);
     }
   };
+
+  if (view === "settings") {
+    return (
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: 16 }}>
+        <SettingsPage onBack={() => { setView("feed"); reload(); }} />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: 16 }}>
@@ -42,7 +53,12 @@ export function App() {
         <h1 style={{ fontSize: 24 }}>feedhub</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {syncResult && (
-            <span style={{ fontSize: 13, color: syncResult.includes("실패") ? "#EA4335" : "#34A853" }}>
+            <span
+              style={{
+                fontSize: 13,
+                color: syncResult.includes("실패") ? "#EA4335" : "#34A853",
+              }}
+            >
               {syncResult}
             </span>
           )}
@@ -61,6 +77,12 @@ export function App() {
           >
             {syncing ? "Syncing..." : "Sync"}
           </button>
+          <span
+            onClick={() => setView("settings")}
+            style={{ fontSize: 20, cursor: "pointer" }}
+          >
+            ⚙️
+          </span>
         </div>
       </div>
       <SearchBar onSearch={setQuery} />
