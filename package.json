@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/main.ts",
-    "build": "tsc",
+    "dev:web": "cd web && npx vite",
+    "build": "tsc && cd web && npm run build",
+    "start": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },
