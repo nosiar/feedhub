@@ -49,5 +49,12 @@ export function useFeed() {
     load();
   }, [load]);
 
+  // Auto-refresh every 60 seconds (only when not searching)
+  useEffect(() => {
+    if (query) return;
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
+  }, [load, query]);
+
   return { items, source, setSource, query, setQuery, loading, loadMore, cursor, reload: load };
 }
