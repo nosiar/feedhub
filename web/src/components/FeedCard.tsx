@@ -321,7 +321,7 @@ export function FeedCard({ item, defaultExpanded }: { item: FeedItem; defaultExp
         </span>
         <span>
           {isKakao && (expanded ? "▲" : "▼")}{" "}
-          <span title={new Date(item.timestamp).toLocaleString("ko-KR")}>{timeAgo(item.timestamp)}</span>
+          <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
       {!isKakao && (
