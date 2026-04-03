@@ -120,7 +120,7 @@ function LinkPreviewCard({
           <img
             src={preview.imageUrl}
             alt=""
-            style={{ width: 200, height: 200, objectFit: "cover", display: "block" }}
+            style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }}
           />
         )}
         <div style={{ padding: "10px 12px" }}>
