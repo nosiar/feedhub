@@ -1,5 +1,79 @@
-import { useState, useEffect, type MouseEvent, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
+
+function Lightbox({
+  urls,
+  index,
+  onClose,
+}: {
+  urls: string[];
+  index: number;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(index);
+
+  const prev = useCallback(() => setCurrent((c) => (c > 0 ? c - 1 : urls.length - 1)), [urls.length]);
+  const next = useCallback(() => setCurrent((c) => (c < urls.length - 1 ? c + 1 : 0)), [urls.length]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, prev, next]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 9999,
+      }}
+    >
+      {urls.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); prev(); }}
+          style={{
+            position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)",
+            background: "rgba(255,255,255,0.2)", border: "none", color: "#fff",
+            fontSize: 28, width: 44, height: 44, borderRadius: 22, cursor: "pointer",
+          }}
+        >
+          ‹
+        </button>
+      )}
+      <img
+        src={urls[current]}
+        alt=""
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", borderRadius: 8 }}
+      />
+      {urls.length > 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); next(); }}
+          style={{
+            position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
+            background: "rgba(255,255,255,0.2)", border: "none", color: "#fff",
+            fontSize: 28, width: 44, height: 44, borderRadius: 22, cursor: "pointer",
+          }}
+        >
+          ›
+        </button>
+      )}
+      <span style={{ position: "absolute", top: 16, right: 20, color: "#fff", fontSize: 12, opacity: 0.7 }}>
+        {current + 1} / {urls.length} · ESC to close
+      </span>
+    </div>
+  );
+}
 
 const SOURCE_ICONS: Record<string, string> = {
   gmail: "\u{1F4E7}",
@@ -32,65 +106,72 @@ function Linkify({ text }: { text: string }): ReactNode {
 
 function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) {
   const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const maxShow = compact ? 3 : urls.length;
   const visible = urls.slice(0, maxShow);
   const remaining = urls.length - maxShow;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 4,
-        flexWrap: "wrap",
-        marginTop: 4,
-      }}
-      onClick={(e: MouseEvent) => e.stopPropagation()}
-    >
-      {visible.map((url, i) =>
-        failedUrls.has(url) ? (
+    <>
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          flexWrap: "wrap",
+          marginTop: 4,
+        }}
+        onClick={(e: MouseEvent) => e.stopPropagation()}
+      >
+        {visible.map((url, i) =>
+          failedUrls.has(url) ? (
+            <span
+              key={i}
+              style={{
+                padding: "8px 12px",
+                background: "#f0f0f0",
+                borderRadius: 6,
+                fontSize: 12,
+                color: "#999",
+              }}
+            >
+              📷 만료됨
+            </span>
+          ) : (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              onClick={() => setLightboxIndex(i)}
+              onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
+              style={{
+                width: compact ? 80 : 200,
+                height: compact ? 80 : 200,
+                borderRadius: 6,
+                objectFit: "cover",
+                display: "block",
+                cursor: "pointer",
+              }}
+            />
+          )
+        )}
+        {remaining > 0 && (
           <span
-            key={i}
             style={{
-              padding: "8px 12px",
-              background: "#f0f0f0",
-              borderRadius: 6,
+              display: "flex",
+              alignItems: "center",
+              padding: "0 8px",
               fontSize: 12,
               color: "#999",
             }}
           >
-            📷 만료됨
+            +{remaining}
           </span>
-        ) : (
-          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-            <img
-              src={url}
-              alt=""
-              onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
-              style={{
-                width: compact ? 80 : 150,
-                height: compact ? 80 : 150,
-                borderRadius: 6,
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          </a>
-        )
+        )}
+      </div>
+      {lightboxIndex !== null && (
+        <Lightbox urls={urls} index={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
-      {remaining > 0 && (
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            padding: "0 8px",
-            fontSize: 12,
-            color: "#999",
-          }}
-        >
-          +{remaining}
-        </span>
-      )}
-    </div>
+    </>
   );
 }
 
