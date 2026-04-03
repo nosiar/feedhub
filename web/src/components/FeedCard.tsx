@@ -31,6 +31,76 @@ function Linkify({ text }: { text: string }): ReactNode {
   );
 }
 
+function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) {
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+  const maxShow = compact ? 3 : urls.length;
+  const visible = urls.slice(0, maxShow);
+  const remaining = urls.length - maxShow;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 4,
+        flexWrap: "wrap",
+        marginTop: 4,
+      }}
+      onClick={(e: MouseEvent) => e.stopPropagation()}
+    >
+      {visible.map((url, i) =>
+        failedUrls.has(url) ? (
+          <span
+            key={i}
+            style={{
+              padding: "8px 12px",
+              background: "#f0f0f0",
+              borderRadius: 6,
+              fontSize: 12,
+              color: "#999",
+            }}
+          >
+            📷 만료됨
+          </span>
+        ) : (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+            <img
+              src={url}
+              alt=""
+              onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
+              style={{
+                maxWidth: compact ? 80 : 300,
+                maxHeight: compact ? 80 : 300,
+                borderRadius: 6,
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </a>
+        )
+      )}
+      {remaining > 0 && (
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "0 8px",
+            fontSize: 12,
+            color: "#999",
+          }}
+        >
+          +{remaining}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function getImageUrls(item: FeedItem): string[] {
+  const urls = item.metadata?.imageUrls;
+  if (Array.isArray(urls) && urls.length > 0) return urls as string[];
+  return [];
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -45,6 +115,25 @@ function timeAgo(dateStr: string): string {
 function formatTime(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
+  const images = getImageUrls(item);
+  const isPhotoOnly =
+    images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
+
+  if (isPhotoOnly) {
+    return <ImageGallery urls={images} compact={compact} />;
+  }
+
+  return (
+    <>
+      <div style={{ whiteSpace: compact ? undefined : "pre-wrap" }}>
+        <Linkify text={item.body ?? ""} />
+      </div>
+      {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
+    </>
+  );
 }
 
 function ChatThread({ messages }: { messages: FeedItem[] }) {
@@ -70,8 +159,8 @@ function ChatThread({ messages }: { messages: FeedItem[] }) {
           <span style={{ color: "#999", marginLeft: 6, fontSize: 11 }}>
             {formatTime(msg.timestamp)}
           </span>
-          <div style={{ color: "#333", marginTop: 2, whiteSpace: "pre-wrap" }}>
-            <Linkify text={msg.body} />
+          <div style={{ color: "#333", marginTop: 2 }}>
+            <MessageBody item={msg} />
           </div>
         </div>
       ))}
@@ -164,7 +253,7 @@ export function FeedCard({ item }: { item: FeedItem }) {
             WebkitBoxOrient: "vertical",
           }}
         >
-          {isKakao ? <Linkify text={item.body} /> : item.body}
+          {isKakao ? <MessageBody item={item} compact /> : item.body}
         </div>
       )}
       {isKakao && expanded && loading && (

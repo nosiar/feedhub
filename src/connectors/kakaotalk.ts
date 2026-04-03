@@ -12,9 +12,24 @@ interface KakaocliMessage {
   sender_id: string;
   sender: string;
   text: string;
+  attachment?: string;
   type: string;
   is_from_me: boolean;
   timestamp: string;
+}
+
+function parseImageUrls(attachment?: string): string[] {
+  if (!attachment) return [];
+  try {
+    const data = JSON.parse(attachment);
+    // Multi-photo: "imageUrls" array
+    if (Array.isArray(data.imageUrls)) return data.imageUrls;
+    // Single photo: "url" field
+    if (data.url) return [data.url];
+    return [];
+  } catch {
+    return [];
+  }
 }
 
 function run(bin: string, args: string[]): Promise<string> {
@@ -59,6 +74,7 @@ export class KakaotalkConnector implements Connector {
               chatId: msg.chat_id,
               senderId: msg.sender_id,
               isFromMe: msg.is_from_me,
+              imageUrls: parseImageUrls(msg.attachment),
             },
           } satisfies FeedItem,
           msgId: msg.id,
