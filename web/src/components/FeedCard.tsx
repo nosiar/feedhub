@@ -67,8 +67,8 @@ function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) 
               alt=""
               onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
               style={{
-                maxWidth: compact ? 80 : 300,
-                maxHeight: compact ? 80 : 300,
+                width: compact ? 80 : 150,
+                height: compact ? 80 : 150,
                 borderRadius: 6,
                 objectFit: "cover",
                 display: "block",
