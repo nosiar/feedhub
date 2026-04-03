@@ -5,16 +5,18 @@ import type { SourceType } from "../../connectors/types.js";
 
 export async function feedRoutes(app: FastifyInstance): Promise<void> {
   app.get("/api/feed", async (req) => {
-    const { source, cursor, limit } = req.query as {
+    const { source, cursor, limit, chatId } = req.query as {
       source?: string;
       cursor?: string;
       limit?: string;
+      chatId?: string;
     };
     const sources = source ? (source.split(",") as SourceType[]) : undefined;
     const items = await queryFeed({
       sources,
       cursor,
       limit: limit ? parseInt(limit, 10) : 20,
+      chatId,
     });
     return { items };
   });

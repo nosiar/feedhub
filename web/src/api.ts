@@ -40,6 +40,16 @@ export async function triggerSync(source?: string): Promise<unknown> {
   return res.json();
 }
 
+export async function fetchChatMessages(chatId: string): Promise<{ items: FeedItem[] }> {
+  const qs = new URLSearchParams({
+    source: "kakaotalk",
+    chatId,
+    limit: "30",
+  });
+  const res = await fetch(`${BASE}/feed?${qs}`);
+  return res.json();
+}
+
 export interface RssFeed {
   url: string;
   title: string;

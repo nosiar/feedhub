@@ -21,6 +21,7 @@ export interface QueryOptions {
   sources?: SourceType[];
   cursor?: string;
   limit?: number;
+  chatId?: string;
 }
 
 export async function queryFeed(opts: QueryOptions): Promise<FeedItem[]> {
@@ -32,6 +33,9 @@ export async function queryFeed(opts: QueryOptions): Promise<FeedItem[]> {
   }
   if (opts.cursor) {
     filter.timestamp = { $lt: new Date(opts.cursor) };
+  }
+  if (opts.chatId) {
+    filter["metadata.chatId"] = opts.chatId;
   }
   return col
     .find(filter)
