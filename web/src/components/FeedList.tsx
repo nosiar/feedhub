@@ -7,11 +7,13 @@ export function FeedList({
   loading,
   onLoadMore,
   hasMore,
+  expandAll,
 }: {
   items: FeedItem[];
   loading: boolean;
   onLoadMore: () => void;
   hasMore: boolean;
+  expandAll?: boolean;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -34,7 +36,7 @@ export function FeedList({
   return (
     <div>
       {items.map((item) => (
-        <FeedCard key={`${item.source}-${item.id}`} item={item} />
+        <FeedCard key={`${item.source}-${item.id}`} item={item} defaultExpanded={expandAll} />
       ))}
       {hasMore && <div ref={sentinel} style={{ height: 1 }} />}
       {loading && (

@@ -1,4 +1,4 @@
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useState, useEffect, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
 
 const SOURCE_ICONS: Record<string, string> = {
@@ -199,15 +199,17 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 }
 
 
-export function FeedCard({ item }: { item: FeedItem }) {
+export function FeedCard({ item, defaultExpanded }: { item: FeedItem; defaultExpanded?: boolean }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isKakao = item.source === "kakaotalk";
-  const [expanded, setExpanded] = useState(false);
+  const [localToggle, setLocalToggle] = useState<boolean | null>(null);
+  useEffect(() => setLocalToggle(null), [defaultExpanded]);
+  const expanded = localToggle ?? (isKakao && !!defaultExpanded);
 
   const handleExpand = () => {
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
-    setExpanded(!expanded);
+    setLocalToggle(!expanded);
   };
 
   return (

@@ -13,6 +13,8 @@ export function App() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [view, setView] = useState<"feed" | "settings">("feed");
+  const [expandAll, setExpandAll] = useState(false);
+  const hasKakao = items.some((i) => i.source === "kakaotalk");
 
   const handleSync = async () => {
     setSyncing(true);
@@ -86,12 +88,33 @@ export function App() {
         </div>
       </div>
       <SearchBar onSearch={setQuery} />
-      <SourceFilter current={source} onChange={setSource} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <SourceFilter current={source} onChange={setSource} />
+        {hasKakao && (
+          <button
+            onClick={() => setExpandAll(!expandAll)}
+            style={{
+              padding: "6px 12px",
+              border: "1px solid #ddd",
+              borderRadius: 20,
+              background: expandAll ? "#4285F4" : "#fff",
+              color: expandAll ? "#fff" : "#333",
+              cursor: "pointer",
+              fontSize: 12,
+              whiteSpace: "nowrap",
+              marginBottom: 16,
+            }}
+          >
+            {expandAll ? "▲ Collapse" : "▼ Expand All"}
+          </button>
+        )}
+      </div>
       <FeedList
         items={items}
         loading={loading}
         onLoadMore={loadMore}
         hasMore={!!cursor}
+        expandAll={expandAll}
       />
     </div>
   );
