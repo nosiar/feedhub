@@ -6,8 +6,14 @@ export const config = {
   syncInterval: parseInt(process.env.SYNC_INTERVAL ?? "5", 10),
   kakaocli: {
     path: process.env.KAKAOCLI_PATH ?? "kakaocli",
-    enabled: process.env.ENABLE_KAKAOTALK !== "false",
-    chatIds: (process.env.KAKAO_CHAT_IDS ?? "").split(",").filter(Boolean),
+    enabled: process.env.ENABLE_KAKAOTALK === "true",
+    chats: (process.env.KAKAO_CHATS ?? "")
+      .split(",")
+      .filter(Boolean)
+      .map((entry) => {
+        const [id, ...rest] = entry.split(":");
+        return { id, name: rest.join(":") || id };
+      }),
   },
   gmail: {
     clientId: process.env.GMAIL_CLIENT_ID ?? "",
