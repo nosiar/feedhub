@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
 import { fetchChatMessages } from "../api.js";
 
@@ -8,6 +8,28 @@ const SOURCE_ICONS: Record<string, string> = {
   slack: "\u{1F4AC}",
   rss: "\u{1F4F0}",
 };
+
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+
+function Linkify({ text }: { text: string }): ReactNode {
+  const parts = text.split(URL_RE);
+  return parts.map((part, i) =>
+    URL_RE.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e: MouseEvent) => e.stopPropagation()}
+        style={{ color: "#1a73e8", textDecoration: "underline" }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -49,7 +71,7 @@ function ChatThread({ messages }: { messages: FeedItem[] }) {
             {formatTime(msg.timestamp)}
           </span>
           <div style={{ color: "#333", marginTop: 2, whiteSpace: "pre-wrap" }}>
-            {msg.body}
+            <Linkify text={msg.body} />
           </div>
         </div>
       ))}
@@ -142,7 +164,7 @@ export function FeedCard({ item }: { item: FeedItem }) {
             WebkitBoxOrient: "vertical",
           }}
         >
-          {item.body}
+          {isKakao ? <Linkify text={item.body} /> : item.body}
         </div>
       )}
       {isKakao && expanded && loading && (
