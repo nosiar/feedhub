@@ -26,7 +26,7 @@ export class RssConnector implements Connector {
             source: "rss",
             title: entry.title ?? "(no title)",
             body: entry.contentSnippet ?? entry.content ?? "",
-            author: entry.creator ?? feed.title ?? "Unknown",
+            author: feed.title ?? entry.creator ?? "Unknown",
             url: entry.link,
             timestamp,
             metadata: { feedUrl: url, feedTitle: feed.title },

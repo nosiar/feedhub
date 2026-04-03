@@ -39,7 +39,7 @@ describe("RssConnector", () => {
       source: "rss",
       title: "First Post",
       body: "Hello world",
-      author: "Author",
+      author: "Test Blog",
       url: "https://example.com/post-1",
     });
     expect(result.newCursor).toBeDefined();
