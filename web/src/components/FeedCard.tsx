@@ -65,6 +65,8 @@ export function FeedCard({ item }: { item: FeedItem }) {
   const [loading, setLoading] = useState(false);
 
   const handleExpand = async () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
     if (expanded) {
       setExpanded(false);
       return;
