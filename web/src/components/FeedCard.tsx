@@ -1,6 +1,5 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { fetchChatMessages } from "../api.js";
 
 const SOURCE_ICONS: Record<string, string> = {
   gmail: "\u{1F4E7}",
@@ -112,10 +111,6 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-}
 
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
@@ -136,63 +131,16 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   );
 }
 
-function ChatThread({ messages }: { messages: FeedItem[] }) {
-  return (
-    <div
-      style={{
-        marginTop: 8,
-        padding: 12,
-        background: "#f8f9fa",
-        borderRadius: 8,
-        maxHeight: 400,
-        overflowY: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-      }}
-    >
-      {messages.map((msg) => (
-        <div key={msg.id} style={{ fontSize: 13 }}>
-          <span style={{ color: "#4285F4", fontWeight: 500 }}>
-            {msg.author || "unknown"}
-          </span>
-          <span style={{ color: "#999", marginLeft: 6, fontSize: 11 }}>
-            {formatTime(msg.timestamp)}
-          </span>
-          <div style={{ color: "#333", marginTop: 2 }}>
-            <MessageBody item={msg} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function FeedCard({ item }: { item: FeedItem }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isKakao = item.source === "kakaotalk";
   const [expanded, setExpanded] = useState(false);
-  const [thread, setThread] = useState<FeedItem[] | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleExpand = async () => {
+  const handleExpand = () => {
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
-    if (expanded) {
-      setExpanded(false);
-      return;
-    }
-    if (!thread) {
-      setLoading(true);
-      try {
-        const chatId = item.metadata.chatId as string;
-        const res = await fetchChatMessages(chatId);
-        setThread(res.items.reverse());
-      } finally {
-        setLoading(false);
-      }
-    }
-    setExpanded(true);
+    setExpanded(!expanded);
   };
 
   return (
@@ -241,7 +189,11 @@ export function FeedCard({ item }: { item: FeedItem }) {
           )}
         </div>
       )}
-      {!expanded && (
+      {isKakao && expanded ? (
+        <div style={{ fontSize: 14, color: "#3c4043", whiteSpace: "pre-wrap" }}>
+          <MessageBody item={item} />
+        </div>
+      ) : (
         <div
           style={{
             fontSize: 14,
@@ -256,10 +208,6 @@ export function FeedCard({ item }: { item: FeedItem }) {
           {isKakao ? <MessageBody item={item} compact /> : item.body}
         </div>
       )}
-      {isKakao && expanded && loading && (
-        <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
-      )}
-      {isKakao && expanded && thread && <ChatThread messages={thread} />}
     </div>
   );
 }
