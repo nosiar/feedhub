@@ -40,24 +40,27 @@ export function FeedCard({ item }: { item: FeedItem }) {
         }}
       >
         <span>
-          {icon} {item.source} &middot; {item.author}
+          {icon} {item.source === "kakaotalk" ? item.title : item.source}
+          {item.author ? ` · ${item.author}` : ""}
         </span>
         <span>{timeAgo(item.timestamp)}</span>
       </div>
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>
-        {item.url ? (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#1a73e8", textDecoration: "none" }}
-          >
-            {item.title}
-          </a>
-        ) : (
-          item.title
-        )}
-      </div>
+      {item.source !== "kakaotalk" && (
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+          {item.url ? (
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#1a73e8", textDecoration: "none" }}
+            >
+              {item.title}
+            </a>
+          ) : (
+            item.title
+          )}
+        </div>
+      )}
       <div
         style={{
           fontSize: 14,

@@ -53,7 +53,7 @@ export class KakaotalkConnector implements Connector {
             source: "kakaotalk" as const,
             title: chat.name,
             body: msg.text,
-            author: msg.sender,
+            author: msg.sender ?? (msg.is_from_me ? "나" : ""),
             timestamp: new Date(msg.timestamp),
             metadata: {
               chatId: msg.chat_id,
