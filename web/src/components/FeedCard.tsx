@@ -320,7 +320,8 @@ export function FeedCard({ item, defaultExpanded }: { item: FeedItem; defaultExp
           {item.author ? ` · ${item.author}` : ""}
         </span>
         <span>
-          {isKakao && (expanded ? "▲" : "▼")} {timeAgo(item.timestamp)}
+          {isKakao && (expanded ? "▲" : "▼")}{" "}
+          <span title={new Date(item.timestamp).toLocaleString("ko-KR")}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
       {!isKakao && (
