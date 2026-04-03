@@ -94,6 +94,70 @@ function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) 
   );
 }
 
+function LinkPreviewCard({
+  preview,
+}: {
+  preview: { title: string; description: string; imageUrl: string; url: string };
+}) {
+  return (
+    <a
+      href={preview.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e: MouseEvent) => e.stopPropagation()}
+      style={{ textDecoration: "none", color: "inherit", display: "block", marginTop: 6 }}
+    >
+      <div
+        style={{
+          border: "1px solid #e0e0e0",
+          borderRadius: 10,
+          overflow: "hidden",
+          background: "#fafafa",
+        }}
+      >
+        {preview.imageUrl && (
+          <img
+            src={preview.imageUrl}
+            alt=""
+            style={{ width: "100%", maxHeight: 200, objectFit: "cover", display: "block" }}
+          />
+        )}
+        <div style={{ padding: "10px 12px" }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#202124" }}>
+            {preview.title}
+          </div>
+          {preview.description && (
+            <div
+              style={{
+                fontSize: 12,
+                color: "#5f6368",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+              }}
+            >
+              {preview.description}
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
+            {new URL(preview.url).hostname}
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function getLinkPreview(
+  item: FeedItem
+): { title: string; description: string; imageUrl: string; url: string } | null {
+  const p = item.metadata?.linkPreview;
+  if (p && typeof p === "object" && "title" in p) return p as { title: string; description: string; imageUrl: string; url: string };
+  return null;
+}
+
 function getImageUrls(item: FeedItem): string[] {
   const urls = item.metadata?.imageUrls;
   if (Array.isArray(urls) && urls.length > 0) return urls as string[];
@@ -114,6 +178,7 @@ function timeAgo(dateStr: string): string {
 
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
+  const preview = getLinkPreview(item);
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
 
@@ -127,6 +192,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
         <Linkify text={item.body ?? ""} />
       </div>
       {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
+      {preview && !compact && <LinkPreviewCard preview={preview} />}
     </>
   );
 }

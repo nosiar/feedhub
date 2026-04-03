@@ -18,17 +18,37 @@ interface KakaocliMessage {
   timestamp: string;
 }
 
-function parseImageUrls(attachment?: string): string[] {
-  if (!attachment) return [];
+interface ParsedAttachment {
+  imageUrls: string[];
+  linkPreview?: { title: string; description: string; imageUrl: string; url: string };
+}
+
+function parseAttachment(attachment?: string): ParsedAttachment {
+  if (!attachment) return { imageUrls: [] };
   try {
     const data = JSON.parse(attachment);
-    // Multi-photo: "imageUrls" array
-    if (Array.isArray(data.imageUrls)) return data.imageUrls;
-    // Single photo: "url" field
-    if (data.url) return [data.url];
-    return [];
+
+    // Link preview (OG data)
+    const scrap = data.universalScrapData;
+    let linkPreview: ParsedAttachment["linkPreview"];
+    if (scrap) {
+      const title = scrap.title ?? scrap.universal?.C?.TI?.txt ?? "";
+      const description = scrap.description ?? "";
+      const imageUrl = scrap.image_url ?? scrap.universal?.C?.TH?.src ?? "";
+      const url = scrap.canonical_url ?? scrap.requested_url ?? "";
+      if (title && url) {
+        linkPreview = { title, description, imageUrl, url };
+      }
+    }
+
+    // Images
+    let imageUrls: string[] = [];
+    if (Array.isArray(data.imageUrls)) imageUrls = data.imageUrls;
+    else if (data.url && !scrap) imageUrls = [data.url];
+
+    return { imageUrls, linkPreview };
   } catch {
-    return [];
+    return { imageUrls: [] };
   }
 }
 
@@ -74,7 +94,7 @@ export class KakaotalkConnector implements Connector {
               chatId: msg.chat_id,
               senderId: msg.sender_id,
               isFromMe: msg.is_from_me,
-              imageUrls: parseImageUrls(msg.attachment),
+              ...parseAttachment(msg.attachment),
             },
           } satisfies FeedItem,
           msgId: msg.id,
