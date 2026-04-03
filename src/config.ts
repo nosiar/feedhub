@@ -4,7 +4,11 @@ export const config = {
   mongoUri: process.env.MONGODB_URI ?? "",
   port: parseInt(process.env.PORT ?? "3000", 10),
   syncInterval: parseInt(process.env.SYNC_INTERVAL ?? "5", 10),
-  kakaocliPath: process.env.KAKAOCLI_PATH ?? "kakaocli",
+  kakaocli: {
+    path: process.env.KAKAOCLI_PATH ?? "kakaocli",
+    enabled: process.env.ENABLE_KAKAOTALK !== "false",
+    chatIds: (process.env.KAKAO_CHAT_IDS ?? "").split(",").filter(Boolean),
+  },
   gmail: {
     clientId: process.env.GMAIL_CLIENT_ID ?? "",
     clientSecret: process.env.GMAIL_CLIENT_SECRET ?? "",

@@ -48,7 +48,7 @@ const { KakaotalkConnector } = await import("../../src/connectors/kakaotalk.js")
 
 describe("KakaotalkConnector", () => {
   it("fetches chats and messages as FeedItems", async () => {
-    const connector = new KakaotalkConnector("kakaocli");
+    const connector = new KakaotalkConnector("kakaocli", []);
     const result = await connector.sync(null);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toMatchObject({
@@ -57,5 +57,11 @@ describe("KakaotalkConnector", () => {
       body: "Hello",
       author: "Kim",
     });
+  });
+
+  it("filters by chatIds when provided", async () => {
+    const connector = new KakaotalkConnector("kakaocli", ["chat-999"]);
+    const result = await connector.sync(null);
+    expect(result.items).toHaveLength(0);
   });
 });

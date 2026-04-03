@@ -25,8 +25,8 @@ async function main() {
   if (config.slack.botToken) {
     connectors.set("slack", new SlackConnector(config.slack.botToken));
   }
-  if (config.kakaocliPath) {
-    connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocliPath));
+  if (config.kakaocli.enabled) {
+    connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocli.path, config.kakaocli.chatIds));
   }
 
   console.log(`[feedhub] Active connectors: ${[...connectors.keys()].join(", ")}`);

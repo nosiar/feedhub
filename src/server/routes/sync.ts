@@ -27,10 +27,17 @@ export function syncRoutes(
   connectors: Map<SourceType, Connector>
 ): void {
   app.post("/api/sync", async () => {
+    const entries = await Promise.allSettled(
+      [...connectors.entries()].map(async ([name, connector]) => {
+        const { count } = await runSync(connector);
+        return [name, count] as const;
+      })
+    );
     const results: Record<string, number> = {};
-    for (const [name, connector] of connectors) {
-      const { count } = await runSync(connector);
-      results[name] = count;
+    for (const entry of entries) {
+      if (entry.status === "fulfilled") {
+        results[entry.value[0]] = entry.value[1];
+      }
     }
     return { results };
   });

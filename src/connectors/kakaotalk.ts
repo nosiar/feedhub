@@ -31,43 +31,64 @@ function run(bin: string, args: string[]): Promise<string> {
 export class KakaotalkConnector implements Connector {
   name = "kakaotalk" as const;
   private bin: string;
+  private chatIds: string[];
 
-  constructor(bin: string) {
+  constructor(bin: string, chatIds: string[]) {
     this.bin = bin;
+    this.chatIds = chatIds;
+  }
+
+  private async getChats(): Promise<KakaocliChat[]> {
+    const output = await run(this.bin, ["chats", "--json", "--limit", "999999"]);
+    const chats: KakaocliChat[] = JSON.parse(output);
+    if (this.chatIds.length > 0) {
+      const idSet = new Set(this.chatIds);
+      return chats.filter((c) => idSet.has(c.id));
+    }
+    return chats;
   }
 
   async sync(cursor: string | null): Promise<{ items: FeedItem[]; newCursor: string }> {
-    const chatsOutput = await run(this.bin, ["chats", "--json", "--limit", "999999"]);
-    const chats: KakaocliChat[] = JSON.parse(chatsOutput);
+    const chats = await this.getChats();
+
+    const results = await Promise.allSettled(
+      chats.map(async (chat) => {
+        const args = [
+          "messages", "--chat-id", chat.id, "--json", "--limit", "100", "--since", "7d",
+        ];
+        if (cursor) args.push("--after-id", cursor);
+
+        const msgsOutput = await run(this.bin, args);
+        const messages: KakaocliMessage[] = JSON.parse(msgsOutput);
+
+        return messages.map((msg) => ({
+          item: {
+            id: msg.id,
+            source: "kakaotalk" as const,
+            title: chat.display_name,
+            body: msg.text,
+            author: msg.sender,
+            timestamp: new Date(msg.timestamp),
+            metadata: {
+              chatId: msg.chat_id,
+              senderId: msg.sender_id,
+              chatType: chat.type,
+              isFromMe: msg.is_from_me,
+            },
+          } satisfies FeedItem,
+          msgId: msg.id,
+        }));
+      })
+    );
 
     const allItems: FeedItem[] = [];
     let maxId = cursor ?? "0";
 
-    for (const chat of chats) {
-      const args = [
-        "messages", "--chat-id", chat.id, "--json", "--limit", "999999", "--since", "180d",
-      ];
-      if (cursor) args.push("--after-id", cursor);
-
-      const msgsOutput = await run(this.bin, args);
-      const messages: KakaocliMessage[] = JSON.parse(msgsOutput);
-
-      for (const msg of messages) {
-        if (BigInt(msg.id) > BigInt(maxId)) maxId = msg.id;
-        allItems.push({
-          id: msg.id,
-          source: "kakaotalk",
-          title: chat.display_name,
-          body: msg.text,
-          author: msg.sender,
-          timestamp: new Date(msg.timestamp),
-          metadata: {
-            chatId: msg.chat_id,
-            senderId: msg.sender_id,
-            chatType: chat.type,
-            isFromMe: msg.is_from_me,
-          },
-        });
+    for (const result of results) {
+      if (result.status !== "fulfilled") continue;
+      for (const { item, msgId } of result.value) {
+        allItems.push(item);
+        if (BigInt(msgId) > BigInt(maxId)) maxId = msgId;
       }
     }
 

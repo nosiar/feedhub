@@ -14,22 +14,29 @@ export class RssConnector implements Connector {
     const allItems: FeedItem[] = [];
     const cursorDate = cursor ? new Date(cursor) : null;
 
-    for (const url of this.feedUrls) {
-      const feed = await this.parser.parseURL(url);
-      for (const entry of feed.items) {
-        const timestamp = new Date(entry.isoDate ?? entry.pubDate ?? Date.now());
-        if (cursorDate && timestamp <= cursorDate) continue;
-        allItems.push({
-          id: entry.guid ?? entry.link ?? `${url}:${timestamp.toISOString()}`,
-          source: "rss",
-          title: entry.title ?? "(no title)",
-          body: entry.contentSnippet ?? entry.content ?? "",
-          author: entry.creator ?? feed.title ?? "Unknown",
-          url: entry.link,
-          timestamp,
-          metadata: { feedUrl: url, feedTitle: feed.title },
-        });
-      }
+    const results = await Promise.allSettled(
+      this.feedUrls.map(async (url) => {
+        const feed = await this.parser.parseURL(url);
+        const items: FeedItem[] = [];
+        for (const entry of feed.items) {
+          const timestamp = new Date(entry.isoDate ?? entry.pubDate ?? Date.now());
+          if (cursorDate && timestamp <= cursorDate) continue;
+          items.push({
+            id: entry.guid ?? entry.link ?? `${url}:${timestamp.toISOString()}`,
+            source: "rss",
+            title: entry.title ?? "(no title)",
+            body: entry.contentSnippet ?? entry.content ?? "",
+            author: entry.creator ?? feed.title ?? "Unknown",
+            url: entry.link,
+            timestamp,
+            metadata: { feedUrl: url, feedTitle: feed.title },
+          });
+        }
+        return items;
+      })
+    );
+    for (const result of results) {
+      if (result.status === "fulfilled") allItems.push(...result.value);
     }
 
     allItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
