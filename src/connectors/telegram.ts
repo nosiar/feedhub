@@ -17,6 +17,20 @@ interface LinkPreview {
   url: string;
 }
 
+function parseCursors(cursor: string | null): Map<string, number> {
+  const map = new Map<string, number>();
+  if (!cursor) return map;
+  for (const entry of cursor.split(",")) {
+    const [chatId, id] = entry.split(":");
+    if (chatId && id) map.set(chatId, parseInt(id, 10));
+  }
+  return map;
+}
+
+function serializeCursors(cursors: Map<string, number>): string {
+  return [...cursors.entries()].map(([k, v]) => `${k}:${v}`).join(",");
+}
+
 export class TelegramConnector implements Connector {
   name = "telegram" as const;
   private config: TelegramConfig;
@@ -43,7 +57,7 @@ export class TelegramConnector implements Connector {
   ): Promise<{ items: FeedItem[]; newCursor: string }> {
     const client = await this.getClient();
     const allItems: FeedItem[] = [];
-    let maxId = cursor ? parseInt(cursor, 10) : 0;
+    const cursors = parseCursors(cursor);
 
     const chatIds = this.config.chats;
 
@@ -71,12 +85,15 @@ export class TelegramConnector implements Connector {
 
     const results = await Promise.allSettled(
       targets.map(async (chat) => {
+        const chatCursor = cursors.get(chat.id) ?? 0;
+
         const msgs = await client.getMessages(chat.id, {
           limit: 50,
-          minId: cursor ? parseInt(cursor, 10) : undefined,
+          minId: chatCursor || undefined,
         });
 
-        return msgs.map((msg) => {
+        let maxId = chatCursor;
+        const items = msgs.map((msg) => {
           const msgId = msg.id;
           if (msgId > maxId) maxId = msgId;
 
@@ -86,14 +103,8 @@ export class TelegramConnector implements Connector {
               ? msg.sender.title
               : "";
 
-          // Extract images
           const imageUrls: string[] = [];
-          if (msg.photo && msg.photo instanceof Api.Photo) {
-            // Photo messages don't have direct URLs in GramJS
-            // We'd need to download them, skip for now
-          }
 
-          // Extract link preview from webpage
           let linkPreview: LinkPreview | undefined;
           if (msg.media && msg.media instanceof Api.MessageMediaWebPage) {
             const page = msg.media.webpage;
@@ -122,17 +133,22 @@ export class TelegramConnector implements Connector {
             },
           } satisfies FeedItem;
         });
+
+        return { chatId: chat.id, items, maxId };
       })
     );
 
     for (const result of results) {
-      if (result.status === "fulfilled") allItems.push(...result.value);
+      if (result.status !== "fulfilled") continue;
+      const { chatId, items, maxId } = result.value;
+      allItems.push(...items);
+      cursors.set(chatId, maxId);
     }
 
     allItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     return {
       items: allItems,
-      newCursor: maxId > 0 ? maxId.toString() : cursor ?? "0",
+      newCursor: serializeCursors(cursors),
     };
   }
 }
