@@ -57,18 +57,21 @@ export function FeedList({
   return (
     <div>
       {items.map((item, i) => (
-        <FeedCard
-          key={`${item.source}-${item.id}`}
-          item={item}
-          defaultExpanded={expandAll}
-          onDelete={onDelete}
-          focused={focusedIndex === i}
-          expanded={expandedIndex === i ? true : undefined}
-          cardRef={cardRefs.current.get(i)}
-          onToggleExpand={() => onToggleExpand?.(i)}
-        />
+        <div key={`${item.source}-${item.id}`} style={{ position: "relative" }}>
+          {hasMore && i === items.length - 3 && (
+            <div ref={sentinel} style={{ position: "absolute", top: 0, height: 1 }} />
+          )}
+          <FeedCard
+            item={item}
+            defaultExpanded={expandAll}
+            onDelete={onDelete}
+            focused={focusedIndex === i}
+            expanded={expandedIndex === i ? true : undefined}
+            cardRef={cardRefs.current.get(i)}
+            onToggleExpand={() => onToggleExpand?.(i)}
+          />
+        </div>
       ))}
-      {hasMore && <div ref={sentinel} style={{ height: 1 }} />}
       {loading && (
         <p style={{ textAlign: "center", color: "#999" }}>Loading...</p>
       )}
