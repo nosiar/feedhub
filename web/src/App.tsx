@@ -113,6 +113,9 @@ export function App() {
             window.open(url, "_blank");
           }
         }
+      } else if (code === "KeyE") {
+        e.preventDefault();
+        setExpandAll((prev) => !prev);
       } else if (e.key === "?" || (code === "Slash" && e.shiftKey)) {
         e.preventDefault();
         setShowHelp((prev) => !prev);
