@@ -154,10 +154,23 @@ function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) 
   );
 }
 
+const SHIMMER_CSS = `@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`;
+
+function ImageShimmer() {
+  return (
+    <>
+      <div style={{ width: "100%", height: 120, background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+      <style>{SHIMMER_CSS}</style>
+    </>
+  );
+}
+
 function LinkPreviewCard({
   preview,
+  imageLoading,
 }: {
   preview: { title: string; description: string; imageUrl: string; url: string };
+  imageLoading?: boolean;
 }) {
   return (
     <a
@@ -168,9 +181,11 @@ function LinkPreviewCard({
       style={{ textDecoration: "none", color: "inherit", display: "block", marginTop: 6 }}
     >
       <div style={{ border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa", maxWidth: 320 }}>
-        {preview.imageUrl && (
+        {preview.imageUrl ? (
           <img src={preview.imageUrl} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }} />
-        )}
+        ) : imageLoading ? (
+          <ImageShimmer />
+        ) : null}
         <div style={{ padding: "10px 12px" }}>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#202124" }}>{preview.title}</div>
           {preview.description && (
@@ -254,15 +269,14 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
         <Linkify text={item.body ?? ""} />
       </div>
       {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
-      {preview && !compact && <LinkPreviewCard preview={preview} />}
+      {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
         <div style={{ marginTop: 6, maxWidth: 320, border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
-          <div style={{ width: "100%", height: 120, background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+          <ImageShimmer />
           <div style={{ padding: "10px 12px" }}>
             <div style={{ height: 14, width: "70%", background: "#e8e8e8", borderRadius: 4, marginBottom: 8 }} />
             <div style={{ height: 10, width: "90%", background: "#f0f0f0", borderRadius: 4 }} />
           </div>
-          <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
         </div>
       )}
     </>
