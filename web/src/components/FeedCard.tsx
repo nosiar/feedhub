@@ -240,6 +240,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
     title: string; description: string; imageUrl: string; url: string;
   } | null>(null);
   const [ogLoading, setOgLoading] = useState(false);
+  const [ogDone, setOgDone] = useState(false);
 
   const needsOgFetch = !compact && (!storedPreview || !storedPreview.imageUrl);
   const preview = storedPreview && storedPreview.imageUrl
@@ -251,10 +252,11 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const showSkeleton = !compact && !!bodyUrl && !preview && ogLoading;
 
   useEffect(() => {
-    if (!bodyUrl || fetchedPreview || ogLoading) return;
+    if (!bodyUrl || ogDone) return;
     setOgLoading(true);
+    setOgDone(true);
     fetchOgPreview(bodyUrl).then((p) => { if (p) setFetchedPreview(p); }).finally(() => setOgLoading(false));
-  }, [bodyUrl, fetchedPreview, ogLoading]);
+  }, [bodyUrl, ogDone]);
 
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
