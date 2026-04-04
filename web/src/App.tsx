@@ -227,7 +227,7 @@ export function App() {
         onDelete={handleDismiss}
         focusedIndex={focusedIndex}
         expandedIndex={expandedIndex}
-        onToggleExpand={(i) => setExpandedIndex((prev) => (prev === i ? null : i))}
+        onToggleExpand={(i) => { setFocusedIndex(i); setExpandedIndex((prev) => (prev === i ? null : i)); }}
       />
       {toast && (
         <Toast
