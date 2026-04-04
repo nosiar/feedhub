@@ -384,14 +384,22 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
         ) : gmailBody ? (
           <div
             ref={(el) => {
+              if (!el) return;
               (gmailBodyRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-              if (el) el.focus();
+              // Shadow DOM isolates email CSS from the rest of the page
+              if (!el.shadowRoot) {
+                const shadow = el.attachShadow({ mode: "open" });
+                const wrapper = document.createElement("div");
+                wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;";
+                wrapper.innerHTML = gmailBody;
+                shadow.appendChild(wrapper);
+              }
+              el.focus();
             }}
             tabIndex={0}
             onClick={(e: MouseEvent) => e.stopPropagation()}
             onKeyDown={(e) => { if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.stopPropagation(); }}
-            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: "80vh", outline: "none" }}
-            dangerouslySetInnerHTML={{ __html: gmailBody }}
+            style={{ overflow: "auto", maxHeight: "80vh", outline: "none" }}
           />
         ) : null
       ) : isChat && expanded ? (
