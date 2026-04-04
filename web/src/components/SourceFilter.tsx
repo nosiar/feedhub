@@ -1,4 +1,4 @@
-const SOURCES = [
+export const SOURCES = [
   { key: undefined, label: "All" },
   { key: "gmail", label: "Gmail" },
   { key: "kakaotalk", label: "Kakao" },

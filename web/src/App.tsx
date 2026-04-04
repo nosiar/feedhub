@@ -1,7 +1,7 @@
 // web/src/App.tsx
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useFeed } from "./hooks/useFeed.js";
-import { SourceFilter } from "./components/SourceFilter.js";
+import { SourceFilter, SOURCES } from "./components/SourceFilter.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { FeedList } from "./components/FeedList.js";
 import { SettingsPage } from "./components/SettingsPage.js";
@@ -73,15 +73,18 @@ export function App() {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 
-      if (e.key === "j") {
+      // Use e.code for IME-independent key detection (works in Korean mode)
+      const code = e.code;
+
+      if (code === "KeyJ") {
         e.preventDefault();
         setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1));
         setExpandedIndex(null);
-      } else if (e.key === "k") {
+      } else if (code === "KeyK") {
         e.preventDefault();
         setFocusedIndex((prev) => Math.max(prev - 1, 0));
         setExpandedIndex(null);
-      } else if (e.key === "Enter" || e.key === "o") {
+      } else if (e.key === "Enter" || code === "KeyO") {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
@@ -90,14 +93,21 @@ export function App() {
       } else if (e.key === "Escape") {
         e.preventDefault();
         setExpandedIndex(null);
-      } else if (e.key === "d" || e.key === "x") {
+      } else if (code === "KeyD" || code === "KeyX") {
         e.preventDefault();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           handleDismiss(visibleItems[focusedIndex]);
-          // Stay at same index (next item slides up)
           if (focusedIndex >= visibleItems.length - 1) {
             setFocusedIndex((prev) => Math.max(prev - 1, 0));
           }
+          setExpandedIndex(null);
+        }
+      } else if (code >= "Digit1" && code <= "Digit9") {
+        const tabIndex = parseInt(code.charAt(5), 10) - 1;
+        if (tabIndex < SOURCES.length) {
+          e.preventDefault();
+          setSource(SOURCES[tabIndex].key as string | undefined);
+          setFocusedIndex(-1);
           setExpandedIndex(null);
         }
       }
