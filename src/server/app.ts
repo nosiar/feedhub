@@ -10,6 +10,7 @@ import { sourcesRoutes } from "./routes/sources.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { kakaoRoutes } from "./routes/kakao.js";
 import { dismissRoutes } from "./routes/dismiss.js";
+import { ogRoutes } from "./routes/og.js";
 import type { Connector, SourceType } from "../connectors/types.js";
 import type { Settings } from "../db/settings-repo.js";
 
@@ -26,6 +27,7 @@ export function buildApp(
   settingsRoutes(app, onSettingsChanged);
   kakaoRoutes(app);
   dismissRoutes(app, connectors);
+  ogRoutes(app);
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   app.register(fastifyStatic, {

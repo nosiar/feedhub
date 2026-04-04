@@ -44,6 +44,18 @@ export async function dismissFeedItem(source: string, id: string): Promise<void>
   await fetch(`${BASE}/feed/${source}/${id}`, { method: "DELETE" });
 }
 
+export async function fetchOgPreview(
+  url: string
+): Promise<{ title: string; description: string; imageUrl: string; url: string } | null> {
+  try {
+    const res = await fetch(`${BASE}/og?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    return data.preview ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchChatMessages(chatId: string): Promise<{ items: FeedItem[] }> {
   const qs = new URLSearchParams({
     source: "kakaotalk",

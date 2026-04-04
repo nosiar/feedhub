@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { dismissFeedItem } from "../api.js";
+import { dismissFeedItem, fetchOgPreview } from "../api.js";
 
 function Lightbox({
   urls,
@@ -259,9 +259,28 @@ function timeAgo(dateStr: string): string {
 }
 
 
+function extractFirstUrl(text: string): string | null {
+  const match = text.match(/(https?:\/\/[^\s]+)/);
+  return match?.[1] ?? null;
+}
+
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
-  const preview = getLinkPreview(item);
+  const storedPreview = getLinkPreview(item);
+  const [fetchedPreview, setFetchedPreview] = useState<{
+    title: string; description: string; imageUrl: string; url: string;
+  } | null>(null);
+  const [ogFetched, setOgFetched] = useState(false);
+
+  const preview = storedPreview ?? fetchedPreview;
+  const bodyUrl = !storedPreview && !compact ? extractFirstUrl(item.body ?? "") : null;
+
+  useEffect(() => {
+    if (!bodyUrl || ogFetched) return;
+    setOgFetched(true);
+    fetchOgPreview(bodyUrl).then((p) => { if (p) setFetchedPreview(p); });
+  }, [bodyUrl, ogFetched]);
+
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
 
