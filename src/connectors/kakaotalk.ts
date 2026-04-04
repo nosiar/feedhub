@@ -75,7 +75,7 @@ export class KakaotalkConnector implements Connector {
     const results = await Promise.allSettled(
       this.chats.map(async (chat) => {
         const args = [
-          "messages", "--chat-id", chat.id, "--json", "--limit", "100", "--since", "7d",
+          "messages", "--chat-id", chat.id, "--json", "--limit", cursor ? "10000" : "100", "--since", "7d",
         ];
         if (cursor) args.push("--after-id", cursor);
 

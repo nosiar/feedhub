@@ -78,7 +78,7 @@ export class TelegramConnector implements Connector {
         const chatCursor = cursors.get(chat.id) ?? 0;
 
         const msgs = await client.getMessages(chat.id, {
-          limit: 50,
+          limit: chatCursor ? 1000 : 50,
           minId: chatCursor || undefined,
         });
 
