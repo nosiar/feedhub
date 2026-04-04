@@ -81,6 +81,7 @@ const SOURCE_ICONS: Record<string, string> = {
   kakaotalk: "\u{1F4AC}",
   slack: "\u{1F4AC}",
   rss: "\u{1F4F0}",
+  telegram: "\u{2708}\u{FE0F}",
 };
 
 const URL_RE = /(https?:\/\/[^\s]+)/g;

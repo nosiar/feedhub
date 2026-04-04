@@ -35,10 +35,15 @@ vi.mock("../../src/db/indexes.js", () => ({
   ensureIndexes: vi.fn(),
 }));
 
+vi.mock("../../src/db/settings-repo.js", () => ({
+  getSettings: vi.fn().mockResolvedValue({ rssFeeds: [], kakaoChats: [] }),
+  saveSettings: vi.fn(),
+}));
+
 const { buildApp } = await import("../../src/server/app.js");
 
 describe("Feed API", () => {
-  const app = buildApp();
+  const app = buildApp(new Map(), () => {});
 
   afterAll(async () => {
     await app.close();

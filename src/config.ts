@@ -24,6 +24,12 @@ export const config = {
   slack: {
     botToken: process.env.SLACK_BOT_TOKEN ?? "",
   },
+  telegram: {
+    apiId: parseInt(process.env.TELEGRAM_API_ID ?? "0", 10),
+    apiHash: process.env.TELEGRAM_API_HASH ?? "",
+    session: process.env.TELEGRAM_SESSION ?? "",
+    chats: (process.env.TELEGRAM_CHATS ?? "").split(",").filter(Boolean),
+  },
   rss: {
     feeds: (process.env.RSS_FEEDS ?? "").split(",").filter(Boolean),
   },

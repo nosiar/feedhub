@@ -5,6 +5,7 @@ import { RssConnector } from "./rss.js";
 import { GmailConnector } from "./gmail.js";
 import { SlackConnector } from "./slack.js";
 import { KakaotalkConnector } from "./kakaotalk.js";
+import { TelegramConnector } from "./telegram.js";
 
 export function buildConnectors(settings: Settings): Map<SourceType, Connector> {
   const connectors = new Map<SourceType, Connector>();
@@ -20,6 +21,9 @@ export function buildConnectors(settings: Settings): Map<SourceType, Connector> 
   }
   if (config.kakaocli.enabled && settings.kakaoChats.length > 0) {
     connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocli.path, settings.kakaoChats));
+  }
+  if (config.telegram.session) {
+    connectors.set("telegram", new TelegramConnector(config.telegram));
   }
 
   return connectors;

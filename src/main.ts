@@ -4,34 +4,30 @@ import { getDb, closeDb } from "./db/client.js";
 import { ensureIndexes } from "./db/indexes.js";
 import { buildApp } from "./server/app.js";
 import { startScheduler } from "./scheduler.js";
-import { RssConnector } from "./connectors/rss.js";
-import { GmailConnector } from "./connectors/gmail.js";
-import { SlackConnector } from "./connectors/slack.js";
-import { KakaotalkConnector } from "./connectors/kakaotalk.js";
+import { getSettings, seedSettings } from "./db/settings-repo.js";
+import { buildConnectors } from "./connectors/registry.js";
 import type { Connector, SourceType } from "./connectors/types.js";
 
 async function main() {
   const db = await getDb();
   await ensureIndexes(db);
 
-  const connectors = new Map<SourceType, Connector>();
+  // Seed settings from .env on first run
+  await seedSettings(config.rss.feeds, config.kakaocli.chats);
 
-  if (config.rss.feeds.length > 0) {
-    connectors.set("rss", new RssConnector(config.rss.feeds));
-  }
-  if (config.gmail.refreshToken) {
-    connectors.set("gmail", new GmailConnector(config.gmail));
-  }
-  if (config.slack.botToken) {
-    connectors.set("slack", new SlackConnector(config.slack.botToken));
-  }
-  if (config.kakaocli.enabled && config.kakaocli.chats.length > 0) {
-    connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocli.path, config.kakaocli.chats));
-  }
+  const settings = await getSettings();
+  const connectors = buildConnectors(settings);
 
   console.log(`[feedhub] Active connectors: ${[...connectors.keys()].join(", ")}`);
 
-  const app = buildApp(connectors);
+  const onSettingsChanged = (newSettings: typeof settings) => {
+    const updated = buildConnectors(newSettings);
+    connectors.clear();
+    for (const [k, v] of updated) connectors.set(k, v);
+    console.log(`[feedhub] Connectors rebuilt: ${[...connectors.keys()].join(", ")}`);
+  };
+
+  const app = buildApp(connectors, onSettingsChanged);
   startScheduler(connectors, config.syncInterval);
 
   await app.listen({ port: config.port, host: "0.0.0.0" });

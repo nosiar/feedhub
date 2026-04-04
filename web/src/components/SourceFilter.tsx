@@ -4,6 +4,7 @@ const SOURCES = [
   { key: "kakaotalk", label: "Kakao" },
   { key: "slack", label: "Slack" },
   { key: "rss", label: "RSS" },
+  { key: "telegram", label: "Telegram" },
 ] as const;
 
 export function SourceFilter({
