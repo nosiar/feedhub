@@ -103,7 +103,17 @@ export function App() {
         e.preventDefault();
         if (showHelp) { setShowHelp(false); return; }
         setExpandedIndex(null);
-      } else if (code === "KeyD" || code === "KeyX") {
+      } else if (code === "KeyD" && e.shiftKey) {
+        e.preventDefault();
+        if (source && visibleItems.length > 0) {
+          if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
+          for (const item of visibleItems) {
+            handleDismiss(item);
+          }
+          setFocusedIndex(-1);
+          setExpandedIndex(null);
+        }
+      } else if ((code === "KeyD" || code === "KeyX") && !e.shiftKey) {
         e.preventDefault();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           handleDismiss(visibleItems[focusedIndex]);
@@ -212,24 +222,49 @@ export function App() {
       <SearchBar onSearch={setQuery} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <SourceFilter current={source} onChange={setSource} />
-        {hasChat && (
-          <button
-            onClick={() => setExpandAll(!expandAll)}
-            style={{
-              padding: "6px 12px",
-              border: "1px solid #ddd",
-              borderRadius: 20,
-              background: expandAll ? "#4285F4" : "#fff",
-              color: expandAll ? "#fff" : "#333",
-              cursor: "pointer",
-              fontSize: 12,
-              whiteSpace: "nowrap",
-              marginBottom: 16,
-            }}
-          >
-            {expandAll ? "▲ Collapse" : "▼ Expand All"}
-          </button>
-        )}
+        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+          {hasChat && (
+            <button
+              onClick={() => setExpandAll(!expandAll)}
+              style={{
+                padding: "6px 12px",
+                border: "1px solid #ddd",
+                borderRadius: 20,
+                background: expandAll ? "#4285F4" : "#fff",
+                color: expandAll ? "#fff" : "#333",
+                cursor: "pointer",
+                fontSize: 12,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {expandAll ? "▲ Collapse" : "▼ Expand All"}
+            </button>
+          )}
+          {source && visibleItems.length > 0 && (
+            <button
+              onClick={() => {
+                if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
+                for (const item of visibleItems) {
+                  handleDismiss(item);
+                }
+                setFocusedIndex(-1);
+                setExpandedIndex(null);
+              }}
+              style={{
+                padding: "6px 12px",
+                border: "1px solid #EA4335",
+                borderRadius: 20,
+                background: "#fff",
+                color: "#EA4335",
+                cursor: "pointer",
+                fontSize: 12,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Dismiss All
+            </button>
+          )}
+        </div>
       </div>
       <FeedList
         items={visibleItems}

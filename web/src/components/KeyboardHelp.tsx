@@ -5,6 +5,7 @@ const SHORTCUTS = [
   { key: "v", desc: "링크 새 탭에서 열기" },
   { key: "Esc", desc: "접기" },
   { key: "e", desc: "전체 펼치기 / 접기" },
+  { key: "Shift+D", desc: "현재 탭 전체 삭제" },
   { key: "1 ~ 6", desc: "소스 탭 전환" },
   { key: "?", desc: "단축키 도움말" },
 ];
