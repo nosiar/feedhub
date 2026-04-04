@@ -224,16 +224,17 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const [fetchedPreview, setFetchedPreview] = useState<{
     title: string; description: string; imageUrl: string; url: string;
   } | null>(null);
-  const [ogFetched, setOgFetched] = useState(false);
+  const [ogLoading, setOgLoading] = useState(false);
 
   const preview = storedPreview ?? fetchedPreview;
   const bodyUrl = !storedPreview && !compact ? extractFirstUrl(item.body ?? "") : null;
+  const showSkeleton = !compact && !!bodyUrl && !preview && ogLoading;
 
   useEffect(() => {
-    if (!bodyUrl || ogFetched) return;
-    setOgFetched(true);
-    fetchOgPreview(bodyUrl).then((p) => { if (p) setFetchedPreview(p); });
-  }, [bodyUrl, ogFetched]);
+    if (!bodyUrl || preview || ogLoading) return;
+    setOgLoading(true);
+    fetchOgPreview(bodyUrl).then((p) => { if (p) setFetchedPreview(p); }).finally(() => setOgLoading(false));
+  }, [bodyUrl, preview, ogLoading]);
 
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
@@ -249,6 +250,16 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
       </div>
       {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
       {preview && !compact && <LinkPreviewCard preview={preview} />}
+      {showSkeleton && (
+        <div style={{ marginTop: 6, maxWidth: 320, border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
+          <div style={{ width: "100%", height: 120, background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite" }} />
+          <div style={{ padding: "10px 12px" }}>
+            <div style={{ height: 14, width: "70%", background: "#e8e8e8", borderRadius: 4, marginBottom: 8 }} />
+            <div style={{ height: 10, width: "90%", background: "#f0f0f0", borderRadius: 4 }} />
+          </div>
+          <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+        </div>
+      )}
     </>
   );
 }
