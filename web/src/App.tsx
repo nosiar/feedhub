@@ -102,6 +102,14 @@ export function App() {
           }
           setExpandedIndex(null);
         }
+      } else if (code === "KeyV") {
+        if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
+          const url = visibleItems[focusedIndex].url;
+          if (url) {
+            e.preventDefault();
+            window.open(url, "_blank");
+          }
+        }
       } else if (code >= "Digit1" && code <= "Digit9") {
         const tabIndex = parseInt(code.charAt(5), 10) - 1;
         if (tabIndex < SOURCES.length) {
