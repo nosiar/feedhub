@@ -41,7 +41,8 @@ export async function triggerSync(source?: string): Promise<unknown> {
 }
 
 export async function dismissFeedItem(source: string, id: string): Promise<void> {
-  await fetch(`${BASE}/feed/${source}/${id}`, { method: "DELETE" });
+  const qs = new URLSearchParams({ source, id });
+  await fetch(`${BASE}/feed/dismiss?${qs}`, { method: "DELETE" });
 }
 
 export async function fetchOgPreview(
