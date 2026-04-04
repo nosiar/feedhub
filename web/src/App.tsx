@@ -1,11 +1,14 @@
 // web/src/App.tsx
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useFeed } from "./hooks/useFeed.js";
 import { SourceFilter } from "./components/SourceFilter.js";
 import { SearchBar } from "./components/SearchBar.js";
 import { FeedList } from "./components/FeedList.js";
 import { SettingsPage } from "./components/SettingsPage.js";
-import { triggerSync } from "./api.js";
+import { Toast } from "./components/Toast.js";
+import { triggerSync, dismissFeedItem, type FeedItem } from "./api.js";
+
+const UNDO_DELAY = 4000;
 
 export function App() {
   const { items, source, setSource, setQuery, loading, loadMore, cursor, reload } =
@@ -14,7 +17,50 @@ export function App() {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [view, setView] = useState<"feed" | "settings">("feed");
   const [expandAll, setExpandAll] = useState(false);
-  const hasKakao = items.some((i) => i.source === "kakaotalk");
+  const [dismissedItems, setDismissedItems] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ item: FeedItem } | null>(null);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasChat = items.some((i) => i.source === "kakaotalk" || i.source === "telegram");
+
+  const handleDismiss = useCallback((item: FeedItem) => {
+    // Cancel previous pending dismiss
+    if (dismissTimer.current) {
+      clearTimeout(dismissTimer.current);
+      // Execute previous dismiss immediately
+      if (toast) {
+        dismissFeedItem(toast.item.source, toast.item.id);
+      }
+    }
+
+    // Hide from UI immediately
+    const key = `${item.source}-${item.id}`;
+    setDismissedItems((prev) => new Set(prev).add(key));
+    setToast({ item });
+
+    // Schedule server dismiss
+    dismissTimer.current = setTimeout(() => {
+      dismissFeedItem(item.source, item.id);
+      setToast(null);
+      dismissTimer.current = null;
+    }, UNDO_DELAY);
+  }, [toast]);
+
+  const handleUndo = useCallback(() => {
+    if (!toast) return;
+    if (dismissTimer.current) {
+      clearTimeout(dismissTimer.current);
+      dismissTimer.current = null;
+    }
+    const key = `${toast.item.source}-${toast.item.id}`;
+    setDismissedItems((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setToast(null);
+  }, [toast]);
+
+  const visibleItems = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`));
 
   const handleSync = async () => {
     setSyncing(true);
@@ -90,7 +136,7 @@ export function App() {
       <SearchBar onSearch={setQuery} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <SourceFilter current={source} onChange={setSource} />
-        {hasKakao && (
+        {hasChat && (
           <button
             onClick={() => setExpandAll(!expandAll)}
             style={{
@@ -110,13 +156,19 @@ export function App() {
         )}
       </div>
       <FeedList
-        items={items}
+        items={visibleItems}
         loading={loading}
         onLoadMore={loadMore}
         hasMore={!!cursor}
         expandAll={expandAll}
-        onDelete={reload}
+        onDelete={handleDismiss}
       />
+      {toast && (
+        <Toast
+          message={toast.item.source === "gmail" ? "메일을 휴지통으로 이동합니다" : "피드에서 숨겼습니다"}
+          onUndo={handleUndo}
+        />
+      )}
     </div>
   );
 }

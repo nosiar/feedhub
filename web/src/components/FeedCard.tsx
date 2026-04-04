@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { dismissFeedItem, fetchOgPreview, fetchGmailBody } from "../api.js";
+import { fetchOgPreview, fetchGmailBody } from "../api.js";
 
 // --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
 const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
@@ -292,23 +292,14 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
   const isExpandable = isChat || isGmail;
 
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = localToggle ?? (isChat && !!defaultExpanded);
 
-  const handleDismiss = async (e: MouseEvent) => {
+  const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
-    const msg = isGmail ? "이 메일을 휴지통으로 이동할까요?" : "이 항목을 피드에서 숨길까요?";
-    if (!confirm(msg)) return;
-    setDeleting(true);
-    try {
-      await dismissFeedItem(item.source, item.id);
-      onDelete?.(item);
-    } finally {
-      setDeleting(false);
-    }
+    onDelete?.(item);
   };
 
   const handleExpand = async () => {
@@ -347,7 +338,7 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
             onClick={handleDismiss}
-            style={{ cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.4 : 0.6, fontSize: 14 }}
+            style={{ cursor: "pointer", opacity: 0.6, fontSize: 14 }}
             title={isGmail ? "휴지통으로 이동" : "피드에서 숨기기"}
           >
             ✕
