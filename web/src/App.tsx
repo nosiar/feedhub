@@ -73,6 +73,13 @@ export function App() {
 
   const visibleItems = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`));
 
+  // Auto-load more when all visible items are dismissed
+  useEffect(() => {
+    if (visibleItems.length === 0 && cursor && !loading) {
+      loadMore();
+    }
+  }, [visibleItems.length, cursor, loading, loadMore]);
+
   // Keyboard shortcuts
   useEffect(() => {
     if (view !== "feed") return;
