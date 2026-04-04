@@ -252,6 +252,7 @@ function extractFirstUrl(text: string): string | null {
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
+  const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
   const storedPreview = getLinkPreview(item);
   const [fetchedPreview, setFetchedPreview] = useState<{
@@ -277,10 +278,10 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   }, [bodyUrl, ogDone]);
 
   const isPhotoOnly =
-    images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
+    allUrls.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
 
   if (isPhotoOnly) {
-    return <ImageGallery urls={images} compact={compact} />;
+    return <ImageGallery urls={allUrls} />;
   }
 
   const TextContent = isTelegram ? MarkdownText : Linkify;
@@ -290,16 +291,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
       <div style={{ whiteSpace: compact ? undefined : "pre-wrap" }}>
         <TextContent text={item.body ?? ""} />
       </div>
-      {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
-      {photoUrl && (
-        <div style={{ marginTop: 6 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-          <img
-            src={photoUrl}
-            alt=""
-            style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: "block" }}
-          />
-        </div>
-      )}
+      {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
       {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
         <div style={{ marginTop: 6, maxWidth: 320, border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
@@ -319,17 +311,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
   const unsupported = item.metadata?.unsupportedMedia;
-  const isPhotoOnly =
-    images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
+  const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
 
   return (
     <>
-      {(isPhotoOnly || images.length > 0) && <ImageGallery urls={images} compact />}
-      {photoUrl && (
-        <div style={{ marginTop: 4 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-          <img src={photoUrl} alt="" style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover", display: "block" }} />
-        </div>
-      )}
+      {allUrls.length > 0 && <ImageGallery urls={allUrls} compact />}
       {unsupported && (
         <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, fontSize: 11, color: "#999" }}>
           미지원 미디어 (투표 등)
@@ -452,7 +438,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
             overflow: "hidden", textOverflow: "ellipsis",
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
           }}>
-            {isChat ? <Linkify text={item.body ?? ""} /> : item.body}
+            {isChat ? (item.source === "telegram" ? <MarkdownText text={item.body ?? ""} /> : <Linkify text={item.body ?? ""} />) : item.body}
           </div>
           {isChat && <CompactMedia item={item} />}
         </div>
