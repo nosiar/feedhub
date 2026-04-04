@@ -87,11 +87,7 @@ export function App() {
 
       if (code === "KeyJ") {
         e.preventDefault();
-        setFocusedIndex((prev) => {
-          const next = Math.min(prev + 1, visibleItems.length - 1);
-          if (next >= visibleItems.length - 3 && cursor) loadMore();
-          return next;
-        });
+        setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1));
         setExpandedIndex(null);
       } else if (code === "KeyK") {
         e.preventDefault();
