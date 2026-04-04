@@ -398,7 +398,11 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
             }}
             tabIndex={0}
             onClick={(e: MouseEvent) => e.stopPropagation()}
-            onKeyDown={(e) => { if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.stopPropagation(); }}
+            onKeyDown={(e) => {
+              if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.stopPropagation();
+              if (e.key === "Escape") { e.stopPropagation(); setLocalToggle(false); }
+              if (e.key === "d" || e.key === "x") { e.stopPropagation(); onDelete?.(item); }
+            }}
             style={{ overflow: "auto", maxHeight: "80vh", outline: "none" }}
           />
         ) : null
