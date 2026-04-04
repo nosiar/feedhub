@@ -11,6 +11,7 @@ export function FeedList({
   onDelete,
   focusedIndex,
   expandedIndex,
+  onToggleExpand,
 }: {
   items: FeedItem[];
   loading: boolean;
@@ -20,11 +21,11 @@ export function FeedList({
   onDelete?: (item: FeedItem) => void;
   focusedIndex?: number;
   expandedIndex?: number | null;
+  onToggleExpand?: (index: number) => void;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, React.RefObject<HTMLDivElement | null>>>(new Map());
 
-  // Ensure refs exist for current items
   items.forEach((_, i) => {
     if (!cardRefs.current.has(i)) {
       cardRefs.current.set(i, createRef<HTMLDivElement>());
@@ -43,7 +44,6 @@ export function FeedList({
     return () => observer.disconnect();
   }, [hasMore, loading, onLoadMore]);
 
-  // Scroll focused card into view
   useEffect(() => {
     if (focusedIndex == null) return;
     const ref = cardRefs.current.get(focusedIndex);
@@ -63,8 +63,9 @@ export function FeedList({
           defaultExpanded={expandAll}
           onDelete={onDelete}
           focused={focusedIndex === i}
-          expandedByKey={expandedIndex === i ? true : expandedIndex !== null && expandedIndex !== i ? false : undefined}
+          expanded={expandedIndex === i ? true : undefined}
           cardRef={cardRefs.current.get(i)}
+          onToggleExpand={() => onToggleExpand?.(i)}
         />
       ))}
       {hasMore && <div ref={sentinel} style={{ height: 1 }} />}

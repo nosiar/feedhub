@@ -81,7 +81,7 @@ export function App() {
         e.preventDefault();
         setFocusedIndex((prev) => Math.max(prev - 1, 0));
         setExpandedIndex(null);
-      } else if (e.key === "Enter" || e.key === "o") {
+      } else if (e.key === "o") {
         e.preventDefault();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           setExpandedIndex((prev) => (prev === focusedIndex ? null : focusedIndex));
@@ -102,8 +102,8 @@ export function App() {
       }
     };
 
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
   }, [view, focusedIndex, visibleItems, handleDismiss]);
 
   const handleSync = async () => {
@@ -208,6 +208,7 @@ export function App() {
         onDelete={handleDismiss}
         focusedIndex={focusedIndex}
         expandedIndex={expandedIndex}
+        onToggleExpand={(i) => setExpandedIndex((prev) => (prev === i ? null : i))}
       />
       {toast && (
         <Toast

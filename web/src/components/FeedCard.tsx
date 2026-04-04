@@ -285,28 +285,26 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   );
 }
 
-export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByKey, cardRef }: {
+export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: expandedProp, cardRef, onToggleExpand }: {
   item: FeedItem;
   defaultExpanded?: boolean;
   onDelete?: (item: FeedItem) => void;
   focused?: boolean;
-  expandedByKey?: boolean;
+  expanded?: boolean;
   cardRef?: React.Ref<HTMLDivElement>;
+  onToggleExpand?: () => void;
 }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isChat = CHAT_SOURCES.has(item.source);
   const isGmail = item.source === "gmail";
   const isExpandable = isChat || isGmail;
 
-  const [localToggle, setLocalToggle] = useState<boolean | null>(null);
+  const expanded = expandedProp ?? (isChat && !!defaultExpanded);
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
   const gmailBodyRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setLocalToggle(null), [defaultExpanded]);
-  const expanded = expandedByKey ?? localToggle ?? (isChat && !!defaultExpanded);
-
-  // Fetch Gmail body when expanded by keyboard
+  // Fetch Gmail body when expanded
   useEffect(() => {
     if (expanded && isGmail && !gmailBody && !gmailLoading) {
       setGmailLoading(true);
@@ -314,34 +312,15 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
     }
   }, [expanded, isGmail, gmailBody, gmailLoading, item.id]);
 
-  // Window-level key handler when Gmail is expanded (Shadow DOM swallows events)
-  useEffect(() => {
-    if (!isGmail || !expanded) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setLocalToggle(false); }
-      if (e.key === "d" || e.key === "x") { onDelete?.(item); }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [isGmail, expanded, item, onDelete]);
-
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
     onDelete?.(item);
   };
 
-  const handleExpand = async () => {
+  const handleClick = () => {
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
-    if (!expanded && isGmail && !gmailBody) {
-      setGmailLoading(true);
-      try {
-        setGmailBody(await fetchGmailBody(item.id));
-      } finally {
-        setGmailLoading(false);
-      }
-    }
-    setLocalToggle(!expanded);
+    onToggleExpand?.();
   };
 
   // Header: chat sources show chat name, others show source type
@@ -350,7 +329,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
   return (
     <div
       ref={cardRef}
-      onClick={isExpandable ? handleExpand : undefined}
+      onClick={isExpandable ? handleClick : undefined}
       style={{
         padding: 16, background: focused ? "#f0f6ff" : "#fff", borderRadius: 8, marginBottom: 8,
         border: expanded ? "1px solid #4285F4" : focused ? "1px solid #90b8f8" : "1px solid #e0e0e0",
