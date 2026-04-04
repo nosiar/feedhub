@@ -6,6 +6,7 @@ import { SearchBar } from "./components/SearchBar.js";
 import { FeedList } from "./components/FeedList.js";
 import { SettingsPage } from "./components/SettingsPage.js";
 import { Toast } from "./components/Toast.js";
+import { KeyboardHelp } from "./components/KeyboardHelp.js";
 import { triggerSync, dismissFeedItem, type FeedItem } from "./api.js";
 
 const UNDO_DELAY = 4000;
@@ -23,6 +24,7 @@ export function App() {
   const hasChat = items.some((i) => i.source === "kakaotalk" || i.source === "telegram");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleDismiss = useCallback((item: FeedItem) => {
     // Cancel previous pending dismiss
@@ -92,6 +94,7 @@ export function App() {
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
+        if (showHelp) { setShowHelp(false); return; }
         setExpandedIndex(null);
       } else if (code === "KeyD" || code === "KeyX") {
         e.preventDefault();
@@ -110,6 +113,9 @@ export function App() {
             window.open(url, "_blank");
           }
         }
+      } else if (e.key === "?" || (code === "Slash" && e.shiftKey)) {
+        e.preventDefault();
+        setShowHelp((prev) => !prev);
       } else if (code >= "Digit1" && code <= "Digit9" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tabIndex = parseInt(code.charAt(5), 10) - 1;
         if (tabIndex < SOURCES.length) {
@@ -123,7 +129,7 @@ export function App() {
 
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [view, focusedIndex, visibleItems, handleDismiss]);
+  }, [view, focusedIndex, visibleItems, handleDismiss, showHelp]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -229,6 +235,7 @@ export function App() {
         expandedIndex={expandedIndex}
         onToggleExpand={(i) => { setFocusedIndex(i); setExpandedIndex((prev) => (prev === i ? null : i)); }}
       />
+      {showHelp && <KeyboardHelp onClose={() => setShowHelp(false)} />}
       {toast && (
         <Toast
           message={toast.item.source === "gmail" ? "메일을 휴지통으로 이동합니다" : "피드에서 숨겼습니다"}
