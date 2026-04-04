@@ -318,6 +318,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 function CompactMedia({ item }: { item: FeedItem }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
+  const unsupported = item.metadata?.unsupportedMedia;
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
 
@@ -328,6 +329,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
         <div style={{ marginTop: 4 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
           <img src={photoUrl} alt="" style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover", display: "block" }} />
         </div>
+      )}
+      {unsupported && (
+        <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, fontSize: 11, color: "#999" }}>
+          미지원 미디어 (투표 등)
+        </span>
       )}
     </>
   );

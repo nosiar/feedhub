@@ -122,6 +122,7 @@ export class TelegramConnector implements Connector {
               imageUrls,
               ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
+              ...(msg.media?.className === "MessageMediaUnsupported" ? { unsupportedMedia: true } : {}),
             },
           } satisfies FeedItem;
         });
