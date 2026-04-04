@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } fro
 import type { FeedItem } from "../api.js";
 import { dismissFeedItem, fetchOgPreview, fetchGmailBody } from "../api.js";
 
+// --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
+const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
+
 function Lightbox({
   urls,
   index,
@@ -116,26 +119,12 @@ function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) 
   return (
     <>
       <div
-        style={{
-          display: "flex",
-          gap: 4,
-          flexWrap: "wrap",
-          marginTop: 4,
-        }}
+        style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 4 }}
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         {visible.map((url, i) =>
           failedUrls.has(url) ? (
-            <span
-              key={i}
-              style={{
-                padding: "8px 12px",
-                background: "#f0f0f0",
-                borderRadius: 6,
-                fontSize: 12,
-                color: "#999",
-              }}
-            >
+            <span key={i} style={{ padding: "8px 12px", background: "#f0f0f0", borderRadius: 6, fontSize: 12, color: "#999" }}>
               📷 만료됨
             </span>
           ) : (
@@ -146,26 +135,14 @@ function ImageGallery({ urls, compact }: { urls: string[]; compact?: boolean }) 
               onClick={() => setLightboxIndex(i)}
               onError={() => setFailedUrls((prev) => new Set(prev).add(url))}
               style={{
-                width: compact ? 80 : 200,
-                height: compact ? 80 : 200,
-                borderRadius: 6,
-                objectFit: "cover",
-                display: "block",
-                cursor: "pointer",
+                width: compact ? 80 : 200, height: compact ? 80 : 200,
+                borderRadius: 6, objectFit: "cover", display: "block", cursor: "pointer",
               }}
             />
           )
         )}
         {remaining > 0 && (
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              padding: "0 8px",
-              fontSize: 12,
-              color: "#999",
-            }}
-          >
+          <span style={{ display: "flex", alignItems: "center", padding: "0 8px", fontSize: 12, color: "#999" }}>
             +{remaining}
           </span>
         )}
@@ -190,43 +167,19 @@ function LinkPreviewCard({
       onClick={(e: MouseEvent) => e.stopPropagation()}
       style={{ textDecoration: "none", color: "inherit", display: "block", marginTop: 6 }}
     >
-      <div
-        style={{
-          border: "1px solid #e0e0e0",
-          borderRadius: 10,
-          overflow: "hidden",
-          background: "#fafafa",
-          maxWidth: 320,
-        }}
-      >
+      <div style={{ border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa", maxWidth: 320 }}>
         {preview.imageUrl && (
-          <img
-            src={preview.imageUrl}
-            alt=""
-            style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }}
-          />
+          <img src={preview.imageUrl} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }} />
         )}
         <div style={{ padding: "10px 12px" }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#202124" }}>
-            {preview.title}
-          </div>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#202124" }}>{preview.title}</div>
           {preview.description && (
-            <div
-              style={{
-                fontSize: 12,
-                color: "#5f6368",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-              }}
-            >
+            <div style={{ fontSize: 12, color: "#5f6368", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
               {preview.description}
             </div>
           )}
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
-            {new URL(preview.url).hostname}
+            {(() => { try { return new URL(preview.url).hostname; } catch { return preview.url; } })()}
           </div>
         </div>
       </div>
@@ -234,11 +187,11 @@ function LinkPreviewCard({
   );
 }
 
-function getLinkPreview(
-  item: FeedItem
-): { title: string; description: string; imageUrl: string; url: string } | null {
+function getLinkPreview(item: FeedItem): { title: string; description: string; imageUrl: string; url: string } | null {
   const p = item.metadata?.linkPreview;
-  if (p && typeof p === "object" && "title" in p) return p as { title: string; description: string; imageUrl: string; url: string };
+  if (p && typeof p === "object" && "title" in p && (p as { title: string }).title) {
+    return p as { title: string; description: string; imageUrl: string; url: string };
+  }
   return null;
 }
 
@@ -259,12 +212,12 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-
 function extractFirstUrl(text: string): string | null {
   const match = text.match(/(https?:\/\/[^\s]+)/);
   return match?.[1] ?? null;
 }
 
+/** Shared message body for chat-like sources (kakaotalk, telegram) */
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
   const storedPreview = getLinkPreview(item);
@@ -300,24 +253,22 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   );
 }
 
-
 export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; defaultExpanded?: boolean; onDelete?: (item: FeedItem) => void }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
-  const isKakao = item.source === "kakaotalk";
+  const isChat = CHAT_SOURCES.has(item.source);
   const isGmail = item.source === "gmail";
-  const isExpandable = isKakao || isGmail;
+  const isExpandable = isChat || isGmail;
+
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
-  const expanded = localToggle ?? (isKakao && !!defaultExpanded);
+  const expanded = localToggle ?? (isChat && !!defaultExpanded);
 
   const handleDismiss = async (e: MouseEvent) => {
     e.stopPropagation();
-    const msg = isGmail
-      ? "이 메일을 휴지통으로 이동할까요?"
-      : "이 항목을 피드에서 숨길까요?";
+    const msg = isGmail ? "이 메일을 휴지통으로 이동할까요?" : "이 항목을 피드에서 숨길까요?";
     if (!confirm(msg)) return;
     setDeleting(true);
     try {
@@ -334,8 +285,7 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
     if (!expanded && isGmail && !gmailBody) {
       setGmailLoading(true);
       try {
-        const body = await fetchGmailBody(item.id);
-        setGmailBody(body);
+        setGmailBody(await fetchGmailBody(item.id));
       } finally {
         setGmailLoading(false);
       }
@@ -343,30 +293,23 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
     setLocalToggle(!expanded);
   };
 
+  // Header: chat sources show chat name, others show source type
+  const headerLabel = isChat ? item.title : item.source;
+
   return (
     <div
       onClick={isExpandable ? handleExpand : undefined}
       style={{
-        padding: 16,
-        background: "#fff",
-        borderRadius: 8,
-        marginBottom: 8,
+        padding: 16, background: "#fff", borderRadius: 8, marginBottom: 8,
         border: expanded ? "1px solid #4285F4" : "1px solid #e0e0e0",
         cursor: isExpandable ? "pointer" : "default",
         transition: "border-color 0.2s",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 4,
-          fontSize: 12,
-          color: "#5f6368",
-        }}
-      >
+      {/* Top row: source + author | dismiss + expand + time */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12, color: "#5f6368" }}>
         <span>
-          {icon} {isKakao ? item.title : item.source}
+          {icon} {headerLabel}
           {item.author ? ` · ${item.author}` : ""}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -381,23 +324,19 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
-      {!isKakao && (
+
+      {/* Title row: non-chat sources show clickable title */}
+      {!isChat && (
         <div style={{ fontWeight: 600, marginBottom: 4 }}>
           {item.url ? (
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e: MouseEvent) => e.stopPropagation()}
-              style={{ color: "#1a73e8", textDecoration: "none" }}
-            >
+            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(e: MouseEvent) => e.stopPropagation()} style={{ color: "#1a73e8", textDecoration: "none" }}>
               {item.title}
             </a>
-          ) : (
-            item.title
-          )}
+          ) : item.title}
         </div>
       )}
+
+      {/* Body */}
       {isGmail && expanded ? (
         gmailLoading ? (
           <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
@@ -408,23 +347,16 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
             dangerouslySetInnerHTML={{ __html: gmailBody }}
           />
         ) : null
-      ) : isKakao && expanded ? (
+      ) : isChat && expanded ? (
         <div style={{ fontSize: 14, color: "#3c4043", whiteSpace: "pre-wrap" }}>
           <MessageBody item={item} />
         </div>
       ) : (
-        <div
-          style={{
-            fontSize: 14,
-            color: "#3c4043",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-          }}
-        >
-          {isKakao ? <MessageBody item={item} compact /> : item.body}
+        <div style={{
+          fontSize: 14, color: "#3c4043", overflow: "hidden", textOverflow: "ellipsis",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        }}>
+          {isChat ? <MessageBody item={item} compact /> : item.body}
         </div>
       )}
     </div>

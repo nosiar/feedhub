@@ -1,5 +1,6 @@
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
+import { Api } from "telegram/tl/index.js";
 import type { Connector, FeedItem } from "./types.js";
 
 interface TelegramConfig {
@@ -7,6 +8,13 @@ interface TelegramConfig {
   apiHash: string;
   session: string;
   chats: string[];
+}
+
+interface LinkPreview {
+  title: string;
+  description: string;
+  imageUrl: string;
+  url: string;
 }
 
 export class TelegramConnector implements Connector {
@@ -39,7 +47,6 @@ export class TelegramConnector implements Connector {
 
     const chatIds = this.config.chats;
 
-    // If no specific chats configured, get recent dialogs
     const targets: { id: string; title: string }[] = [];
     if (chatIds.length > 0) {
       for (const chatId of chatIds) {
@@ -79,6 +86,27 @@ export class TelegramConnector implements Connector {
               ? msg.sender.title
               : "";
 
+          // Extract images
+          const imageUrls: string[] = [];
+          if (msg.photo && msg.photo instanceof Api.Photo) {
+            // Photo messages don't have direct URLs in GramJS
+            // We'd need to download them, skip for now
+          }
+
+          // Extract link preview from webpage
+          let linkPreview: LinkPreview | undefined;
+          if (msg.media && msg.media instanceof Api.MessageMediaWebPage) {
+            const page = msg.media.webpage;
+            if (page && page instanceof Api.WebPage) {
+              linkPreview = {
+                title: page.title ?? "",
+                description: page.description ?? "",
+                imageUrl: page.photo && page.photo instanceof Api.Photo ? "" : "",
+                url: page.url ?? "",
+              };
+            }
+          }
+
           return {
             id: `${chat.id}_${msgId}`,
             source: "telegram" as const,
@@ -89,6 +117,8 @@ export class TelegramConnector implements Connector {
             metadata: {
               chatId: chat.id,
               messageId: msgId,
+              imageUrls,
+              ...(linkPreview ? { linkPreview } : {}),
             },
           } satisfies FeedItem;
         });
