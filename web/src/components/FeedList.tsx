@@ -8,12 +8,14 @@ export function FeedList({
   onLoadMore,
   hasMore,
   expandAll,
+  onDelete,
 }: {
   items: FeedItem[];
   loading: boolean;
   onLoadMore: () => void;
   hasMore: boolean;
   expandAll?: boolean;
+  onDelete?: (item: FeedItem) => void;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,7 @@ export function FeedList({
   return (
     <div>
       {items.map((item) => (
-        <FeedCard key={`${item.source}-${item.id}`} item={item} defaultExpanded={expandAll} />
+        <FeedCard key={`${item.source}-${item.id}`} item={item} defaultExpanded={expandAll} onDelete={onDelete} />
       ))}
       {hasMore && <div ref={sentinel} style={{ height: 1 }} />}
       {loading && (

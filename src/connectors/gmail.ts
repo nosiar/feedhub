@@ -74,4 +74,9 @@ export class GmailConnector implements Connector {
 
     return { items, newCursor };
   }
+
+  async trash(messageId: string): Promise<void> {
+    const gmail = this.getClient();
+    await gmail.users.messages.trash({ userId: "me", id: messageId });
+  }
 }

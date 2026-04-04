@@ -115,6 +115,7 @@ export function App() {
         onLoadMore={loadMore}
         hasMore={!!cursor}
         expandAll={expandAll}
+        onDelete={reload}
       />
     </div>
   );

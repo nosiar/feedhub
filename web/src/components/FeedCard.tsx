@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
+import { trashGmail } from "../api.js";
 
 function Lightbox({
   urls,
@@ -280,12 +281,26 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 }
 
 
-export function FeedCard({ item, defaultExpanded }: { item: FeedItem; defaultExpanded?: boolean }) {
+export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; defaultExpanded?: boolean; onDelete?: (item: FeedItem) => void }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isKakao = item.source === "kakaotalk";
+  const isGmail = item.source === "gmail";
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = localToggle ?? (isKakao && !!defaultExpanded);
+
+  const handleTrash = async (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("이 메일을 휴지통으로 이동할까요?")) return;
+    setDeleting(true);
+    try {
+      await trashGmail(item.id);
+      onDelete?.(item);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleExpand = () => {
     const selection = window.getSelection();
@@ -319,7 +334,16 @@ export function FeedCard({ item, defaultExpanded }: { item: FeedItem; defaultExp
           {icon} {isKakao ? item.title : item.source}
           {item.author ? ` · ${item.author}` : ""}
         </span>
-        <span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {isGmail && (
+            <span
+              onClick={handleTrash}
+              style={{ cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.4 : 0.6, fontSize: 14 }}
+              title="휴지통으로 이동"
+            >
+              🗑
+            </span>
+          )}
           {isKakao && (expanded ? "▲" : "▼")}{" "}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>

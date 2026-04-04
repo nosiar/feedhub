@@ -40,6 +40,10 @@ export async function triggerSync(source?: string): Promise<unknown> {
   return res.json();
 }
 
+export async function trashGmail(messageId: string): Promise<void> {
+  await fetch(`${BASE}/gmail/${messageId}`, { method: "DELETE" });
+}
+
 export async function fetchChatMessages(chatId: string): Promise<{ items: FeedItem[] }> {
   const qs = new URLSearchParams({
     source: "kakaotalk",
