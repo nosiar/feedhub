@@ -81,8 +81,9 @@ export function App() {
         e.preventDefault();
         setFocusedIndex((prev) => Math.max(prev - 1, 0));
         setExpandedIndex(null);
-      } else if (e.key === "o") {
+      } else if (e.key === "Enter" || e.key === "o") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           setExpandedIndex((prev) => (prev === focusedIndex ? null : focusedIndex));
         }
