@@ -285,7 +285,14 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   );
 }
 
-export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; defaultExpanded?: boolean; onDelete?: (item: FeedItem) => void }) {
+export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByKey, cardRef }: {
+  item: FeedItem;
+  defaultExpanded?: boolean;
+  onDelete?: (item: FeedItem) => void;
+  focused?: boolean;
+  expandedByKey?: boolean;
+  cardRef?: React.Ref<HTMLDivElement>;
+}) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isChat = CHAT_SOURCES.has(item.source);
   const isGmail = item.source === "gmail";
@@ -295,7 +302,15 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
-  const expanded = localToggle ?? (isChat && !!defaultExpanded);
+  const expanded = expandedByKey ?? localToggle ?? (isChat && !!defaultExpanded);
+
+  // Fetch Gmail body when expanded by keyboard
+  useEffect(() => {
+    if (expanded && isGmail && !gmailBody && !gmailLoading) {
+      setGmailLoading(true);
+      fetchGmailBody(item.id).then(setGmailBody).finally(() => setGmailLoading(false));
+    }
+  }, [expanded, isGmail, gmailBody, gmailLoading, item.id]);
 
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
@@ -321,12 +336,14 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
 
   return (
     <div
+      ref={cardRef}
       onClick={isExpandable ? handleExpand : undefined}
       style={{
-        padding: 16, background: "#fff", borderRadius: 8, marginBottom: 8,
-        border: expanded ? "1px solid #4285F4" : "1px solid #e0e0e0",
+        padding: 16, background: focused ? "#f0f6ff" : "#fff", borderRadius: 8, marginBottom: 8,
+        border: expanded ? "1px solid #4285F4" : focused ? "1px solid #90b8f8" : "1px solid #e0e0e0",
         cursor: isExpandable ? "pointer" : "default",
-        transition: "border-color 0.2s",
+        transition: "all 0.15s",
+        outline: "none",
       }}
     >
       {/* Top row: source + author | dismiss + expand + time */}

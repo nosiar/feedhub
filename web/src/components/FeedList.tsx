@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, createRef } from "react";
 import type { FeedItem } from "../api.js";
 import { FeedCard } from "./FeedCard.js";
 
@@ -9,6 +9,8 @@ export function FeedList({
   hasMore,
   expandAll,
   onDelete,
+  focusedIndex,
+  expandedIndex,
 }: {
   items: FeedItem[];
   loading: boolean;
@@ -16,8 +18,18 @@ export function FeedList({
   hasMore: boolean;
   expandAll?: boolean;
   onDelete?: (item: FeedItem) => void;
+  focusedIndex?: number;
+  expandedIndex?: number | null;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<number, React.RefObject<HTMLDivElement | null>>>(new Map());
+
+  // Ensure refs exist for current items
+  items.forEach((_, i) => {
+    if (!cardRefs.current.has(i)) {
+      cardRefs.current.set(i, createRef<HTMLDivElement>());
+    }
+  });
 
   useEffect(() => {
     if (!sentinel.current || !hasMore) return;
@@ -31,14 +43,29 @@ export function FeedList({
     return () => observer.disconnect();
   }, [hasMore, loading, onLoadMore]);
 
+  // Scroll focused card into view
+  useEffect(() => {
+    if (focusedIndex == null) return;
+    const ref = cardRefs.current.get(focusedIndex);
+    ref?.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [focusedIndex]);
+
   if (items.length === 0 && !loading) {
     return <p style={{ textAlign: "center", color: "#999" }}>No items</p>;
   }
 
   return (
     <div>
-      {items.map((item) => (
-        <FeedCard key={`${item.source}-${item.id}`} item={item} defaultExpanded={expandAll} onDelete={onDelete} />
+      {items.map((item, i) => (
+        <FeedCard
+          key={`${item.source}-${item.id}`}
+          item={item}
+          defaultExpanded={expandAll}
+          onDelete={onDelete}
+          focused={focusedIndex === i}
+          expandedByKey={expandedIndex === i ? true : expandedIndex !== null && expandedIndex !== i ? false : undefined}
+          cardRef={cardRefs.current.get(i)}
+        />
       ))}
       {hasMore && <div ref={sentinel} style={{ height: 1 }} />}
       {loading && (

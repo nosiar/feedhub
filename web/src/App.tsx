@@ -1,5 +1,5 @@
 // web/src/App.tsx
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useFeed } from "./hooks/useFeed.js";
 import { SourceFilter } from "./components/SourceFilter.js";
 import { SearchBar } from "./components/SearchBar.js";
@@ -21,6 +21,8 @@ export function App() {
   const [toast, setToast] = useState<{ item: FeedItem } | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasChat = items.some((i) => i.source === "kakaotalk" || i.source === "telegram");
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const handleDismiss = useCallback((item: FeedItem) => {
     // Cancel previous pending dismiss
@@ -61,6 +63,48 @@ export function App() {
   }, [toast]);
 
   const visibleItems = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`));
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (view !== "feed") return;
+
+    const handler = (e: KeyboardEvent) => {
+      // Don't handle when typing in input
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      if (e.key === "j") {
+        e.preventDefault();
+        setFocusedIndex((prev) => Math.min(prev + 1, visibleItems.length - 1));
+        setExpandedIndex(null);
+      } else if (e.key === "k") {
+        e.preventDefault();
+        setFocusedIndex((prev) => Math.max(prev - 1, 0));
+        setExpandedIndex(null);
+      } else if (e.key === "Enter" || e.key === "o") {
+        e.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
+          setExpandedIndex((prev) => (prev === focusedIndex ? null : focusedIndex));
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setExpandedIndex(null);
+      } else if (e.key === "d" || e.key === "x") {
+        e.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
+          handleDismiss(visibleItems[focusedIndex]);
+          // Stay at same index (next item slides up)
+          if (focusedIndex >= visibleItems.length - 1) {
+            setFocusedIndex((prev) => Math.max(prev - 1, 0));
+          }
+          setExpandedIndex(null);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [view, focusedIndex, visibleItems, handleDismiss]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -162,6 +206,8 @@ export function App() {
         hasMore={!!cursor}
         expandAll={expandAll}
         onDelete={handleDismiss}
+        focusedIndex={focusedIndex}
+        expandedIndex={expandedIndex}
       />
       {toast && (
         <Toast
