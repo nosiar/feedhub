@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { trashGmail } from "../api.js";
+import { dismissFeedItem } from "../api.js";
 
 function Lightbox({
   urls,
@@ -284,18 +284,20 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; defaultExpanded?: boolean; onDelete?: (item: FeedItem) => void }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isKakao = item.source === "kakaotalk";
-  const isGmail = item.source === "gmail";
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = localToggle ?? (isKakao && !!defaultExpanded);
 
-  const handleTrash = async (e: MouseEvent) => {
+  const handleDismiss = async (e: MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("이 메일을 휴지통으로 이동할까요?")) return;
+    const msg = item.source === "gmail"
+      ? "이 메일을 휴지통으로 이동할까요?"
+      : "이 항목을 피드에서 숨길까요?";
+    if (!confirm(msg)) return;
     setDeleting(true);
     try {
-      await trashGmail(item.id);
+      await dismissFeedItem(item.source, item.id);
       onDelete?.(item);
     } finally {
       setDeleting(false);
@@ -335,15 +337,13 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
           {item.author ? ` · ${item.author}` : ""}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {isGmail && (
-            <span
-              onClick={handleTrash}
-              style={{ cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.4 : 0.6, fontSize: 14 }}
-              title="휴지통으로 이동"
-            >
-              🗑
-            </span>
-          )}
+          <span
+            onClick={handleDismiss}
+            style={{ cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.4 : 0.6, fontSize: 14 }}
+            title={item.source === "gmail" ? "휴지통으로 이동" : "피드에서 숨기기"}
+          >
+            ✕
+          </span>
           {isKakao && (expanded ? "▲" : "▼")}{" "}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>

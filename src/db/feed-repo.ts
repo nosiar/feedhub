@@ -10,11 +10,22 @@ export async function upsertFeedItems(items: FeedItem[]): Promise<void> {
   const ops = items.map((item) => ({
     updateOne: {
       filter: { source: item.source, id: item.id },
-      update: { $set: item },
+      update: {
+        $set: item,
+        $setOnInsert: { dismissed: false },
+      },
       upsert: true,
     },
   }));
   await col.bulkWrite(ops);
+}
+
+export async function dismissFeedItem(source: SourceType, id: string): Promise<void> {
+  const db = await getDb();
+  await db.collection(COLLECTION).updateOne(
+    { source, id },
+    { $set: { dismissed: true } }
+  );
 }
 
 export interface QueryOptions {
@@ -27,7 +38,7 @@ export interface QueryOptions {
 export async function queryFeed(opts: QueryOptions): Promise<FeedItem[]> {
   const db = await getDb();
   const col = db.collection<FeedItem>(COLLECTION);
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { dismissed: { $ne: true } };
   if (opts.sources && opts.sources.length > 0) {
     filter.source = { $in: opts.sources };
   }
@@ -52,6 +63,7 @@ export async function searchFeed(
   const col = db.collection<FeedItem>(COLLECTION);
   const filter: Record<string, unknown> = {
     $text: { $search: query },
+    dismissed: { $ne: true },
   };
   if (opts.sources && opts.sources.length > 0) {
     filter.source = { $in: opts.sources };

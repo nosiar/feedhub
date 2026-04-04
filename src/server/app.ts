@@ -9,10 +9,9 @@ import { syncRoutes } from "./routes/sync.js";
 import { sourcesRoutes } from "./routes/sources.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { kakaoRoutes } from "./routes/kakao.js";
+import { dismissRoutes } from "./routes/dismiss.js";
 import type { Connector, SourceType } from "../connectors/types.js";
 import type { Settings } from "../db/settings-repo.js";
-import { GmailConnector } from "../connectors/gmail.js";
-import { getDb } from "../db/client.js";
 
 export function buildApp(
   connectors: Map<SourceType, Connector>,
@@ -26,17 +25,7 @@ export function buildApp(
   sourcesRoutes(app, connectors);
   settingsRoutes(app, onSettingsChanged);
   kakaoRoutes(app);
-
-  app.delete<{ Params: { id: string } }>("/api/gmail/:id", async (req, reply) => {
-    const gmail = connectors.get("gmail");
-    if (!gmail || !(gmail instanceof GmailConnector)) {
-      return reply.status(400).send({ error: "Gmail not connected" });
-    }
-    await gmail.trash(req.params.id);
-    const db = await getDb();
-    await db.collection("feed_items").deleteOne({ source: "gmail", id: req.params.id });
-    return { ok: true };
-  });
+  dismissRoutes(app, connectors);
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   app.register(fastifyStatic, {

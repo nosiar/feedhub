@@ -40,8 +40,8 @@ export async function triggerSync(source?: string): Promise<unknown> {
   return res.json();
 }
 
-export async function trashGmail(messageId: string): Promise<void> {
-  await fetch(`${BASE}/gmail/${messageId}`, { method: "DELETE" });
+export async function dismissFeedItem(source: string, id: string): Promise<void> {
+  await fetch(`${BASE}/feed/${source}/${id}`, { method: "DELETE" });
 }
 
 export async function fetchChatMessages(chatId: string): Promise<{ items: FeedItem[] }> {
