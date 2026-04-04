@@ -386,24 +386,22 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
             ref={(el) => {
               if (!el) return;
               (gmailBodyRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-              // Shadow DOM isolates email CSS from the rest of the page
               if (!el.shadowRoot) {
                 const shadow = el.attachShadow({ mode: "open" });
                 const wrapper = document.createElement("div");
-                wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;";
+                wrapper.tabIndex = 0;
+                wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;";
                 wrapper.innerHTML = gmailBody;
+                wrapper.addEventListener("keydown", (e) => {
+                  if (e.key === "Escape") { setLocalToggle(false); }
+                  if (e.key === "d" || e.key === "x") { onDelete?.(item); }
+                });
                 shadow.appendChild(wrapper);
+                wrapper.focus();
               }
-              el.focus();
             }}
-            tabIndex={0}
             onClick={(e: MouseEvent) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.stopPropagation();
-              if (e.key === "Escape") { e.stopPropagation(); setLocalToggle(false); }
-              if (e.key === "d" || e.key === "x") { e.stopPropagation(); onDelete?.(item); }
-            }}
-            style={{ overflow: "auto", maxHeight: "80vh", outline: "none" }}
+            style={{ outline: "none" }}
           />
         ) : null
       ) : isChat && expanded ? (
