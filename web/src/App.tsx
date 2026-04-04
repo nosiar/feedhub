@@ -73,6 +73,23 @@ export function App() {
 
   const visibleItems = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`));
 
+  const handleDismissAll = useCallback(() => {
+    if (visibleItems.length === 0) return;
+    if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
+    // Hide from UI immediately
+    setDismissedItems((prev) => {
+      const next = new Set(prev);
+      for (const item of visibleItems) next.add(`${item.source}-${item.id}`);
+      return next;
+    });
+    // Send all to server immediately (no undo for bulk)
+    for (const item of visibleItems) {
+      dismissFeedItem(item.source, item.id);
+    }
+    setFocusedIndex(-1);
+    setExpandedIndex(null);
+  }, [visibleItems]);
+
   // Auto-load more when all visible items are dismissed
   useEffect(() => {
     if (visibleItems.length === 0 && cursor && !loading) {
@@ -112,14 +129,7 @@ export function App() {
         setExpandedIndex(null);
       } else if (code === "KeyD" && e.shiftKey) {
         e.preventDefault();
-        if (source && visibleItems.length > 0) {
-          if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
-          for (const item of visibleItems) {
-            handleDismiss(item);
-          }
-          setFocusedIndex(-1);
-          setExpandedIndex(null);
-        }
+        if (source) handleDismissAll();
       } else if ((code === "KeyD" || code === "KeyX") && !e.shiftKey) {
         e.preventDefault();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
@@ -249,14 +259,7 @@ export function App() {
           )}
           {source && visibleItems.length > 0 && (
             <button
-              onClick={() => {
-                if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
-                for (const item of visibleItems) {
-                  handleDismiss(item);
-                }
-                setFocusedIndex(-1);
-                setExpandedIndex(null);
-              }}
+              onClick={handleDismissAll}
               style={{
                 padding: "6px 12px",
                 border: "1px solid #EA4335",
