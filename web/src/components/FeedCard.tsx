@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
 import { fetchOgPreview, fetchGmailBody } from "../api.js";
 
@@ -301,6 +301,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
+  const gmailBodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = expandedByKey ?? localToggle ?? (isChat && !!defaultExpanded);
 
@@ -382,8 +383,14 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
           <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
         ) : gmailBody ? (
           <div
+            ref={(el) => {
+              (gmailBodyRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+              if (el) el.focus();
+            }}
+            tabIndex={0}
             onClick={(e: MouseEvent) => e.stopPropagation()}
-            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: "80vh" }}
+            onKeyDown={(e) => { if (["ArrowUp", "ArrowDown", " "].includes(e.key)) e.stopPropagation(); }}
+            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: "80vh", outline: "none" }}
             dangerouslySetInnerHTML={{ __html: gmailBody }}
           />
         ) : null
