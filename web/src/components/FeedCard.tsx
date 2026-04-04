@@ -226,15 +226,20 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   } | null>(null);
   const [ogLoading, setOgLoading] = useState(false);
 
-  const preview = storedPreview ?? fetchedPreview;
-  const bodyUrl = !storedPreview && !compact ? extractFirstUrl(item.body ?? "") : null;
+  const needsOgFetch = !compact && (!storedPreview || !storedPreview.imageUrl);
+  const preview = storedPreview && storedPreview.imageUrl
+    ? storedPreview
+    : fetchedPreview
+      ? { ...(storedPreview ?? {}), ...fetchedPreview }
+      : storedPreview;
+  const bodyUrl = needsOgFetch ? extractFirstUrl(item.body ?? "") : null;
   const showSkeleton = !compact && !!bodyUrl && !preview && ogLoading;
 
   useEffect(() => {
-    if (!bodyUrl || preview || ogLoading) return;
+    if (!bodyUrl || fetchedPreview || ogLoading) return;
     setOgLoading(true);
     fetchOgPreview(bodyUrl).then((p) => { if (p) setFetchedPreview(p); }).finally(() => setOgLoading(false));
-  }, [bodyUrl, preview, ogLoading]);
+  }, [bodyUrl, fetchedPreview, ogLoading]);
 
   const isPhotoOnly =
     images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
