@@ -366,7 +366,7 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
         ) : gmailBody ? (
           <div
             onClick={(e: MouseEvent) => e.stopPropagation()}
-            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: 500 }}
+            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: "80vh" }}
             dangerouslySetInnerHTML={{ __html: gmailBody }}
           />
         ) : null
