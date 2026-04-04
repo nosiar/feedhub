@@ -75,6 +75,42 @@ export class GmailConnector implements Connector {
     return { items, newCursor };
   }
 
+  async getBody(messageId: string): Promise<string> {
+    const gmail = this.getClient();
+    const detail = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+      format: "full",
+    });
+
+    const findBody = (parts: typeof detail.data.payload.parts, mimeType: string): string | null => {
+      if (!parts) return null;
+      for (const part of parts) {
+        if (part.mimeType === mimeType && part.body?.data) {
+          return Buffer.from(part.body.data, "base64url").toString("utf-8");
+        }
+        if (part.parts) {
+          const found = findBody(part.parts, mimeType);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const payload = detail.data.payload;
+
+    // Single-part message
+    if (payload?.body?.data) {
+      return Buffer.from(payload.body.data, "base64url").toString("utf-8");
+    }
+
+    // Multipart: prefer HTML, fallback to plain text
+    return findBody(payload?.parts ?? [], "text/html")
+      ?? findBody(payload?.parts ?? [], "text/plain")
+      ?? detail.data.snippet
+      ?? "";
+  }
+
   async trash(messageId: string): Promise<void> {
     const gmail = this.getClient();
     await gmail.users.messages.trash({ userId: "me", id: messageId });

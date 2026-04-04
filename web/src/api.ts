@@ -45,6 +45,12 @@ export async function dismissFeedItem(source: string, id: string): Promise<void>
   await fetch(`${BASE}/feed/dismiss?${qs}`, { method: "DELETE" });
 }
 
+export async function fetchGmailBody(messageId: string): Promise<string> {
+  const res = await fetch(`${BASE}/gmail/${messageId}/body`);
+  const data = await res.json();
+  return data.body ?? "";
+}
+
 export async function fetchOgPreview(
   url: string
 ): Promise<{ title: string; description: string; imageUrl: string; url: string } | null> {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { dismissFeedItem, fetchOgPreview } from "../api.js";
+import { dismissFeedItem, fetchOgPreview, fetchGmailBody } from "../api.js";
 
 function Lightbox({
   urls,
@@ -303,14 +303,18 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; defaultExpanded?: boolean; onDelete?: (item: FeedItem) => void }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isKakao = item.source === "kakaotalk";
+  const isGmail = item.source === "gmail";
+  const isExpandable = isKakao || isGmail;
   const [localToggle, setLocalToggle] = useState<boolean | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [gmailBody, setGmailBody] = useState<string | null>(null);
+  const [gmailLoading, setGmailLoading] = useState(false);
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = localToggle ?? (isKakao && !!defaultExpanded);
 
   const handleDismiss = async (e: MouseEvent) => {
     e.stopPropagation();
-    const msg = item.source === "gmail"
+    const msg = isGmail
       ? "이 메일을 휴지통으로 이동할까요?"
       : "이 항목을 피드에서 숨길까요?";
     if (!confirm(msg)) return;
@@ -323,22 +327,31 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
     }
   };
 
-  const handleExpand = () => {
+  const handleExpand = async () => {
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
+    if (!expanded && isGmail && !gmailBody) {
+      setGmailLoading(true);
+      try {
+        const body = await fetchGmailBody(item.id);
+        setGmailBody(body);
+      } finally {
+        setGmailLoading(false);
+      }
+    }
     setLocalToggle(!expanded);
   };
 
   return (
     <div
-      onClick={isKakao ? handleExpand : undefined}
+      onClick={isExpandable ? handleExpand : undefined}
       style={{
         padding: 16,
         background: "#fff",
         borderRadius: 8,
         marginBottom: 8,
         border: expanded ? "1px solid #4285F4" : "1px solid #e0e0e0",
-        cursor: isKakao ? "pointer" : "default",
+        cursor: isExpandable ? "pointer" : "default",
         transition: "border-color 0.2s",
       }}
     >
@@ -359,11 +372,11 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
           <span
             onClick={handleDismiss}
             style={{ cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.4 : 0.6, fontSize: 14 }}
-            title={item.source === "gmail" ? "휴지통으로 이동" : "피드에서 숨기기"}
+            title={isGmail ? "휴지통으로 이동" : "피드에서 숨기기"}
           >
             ✕
           </span>
-          {isKakao && (expanded ? "▲" : "▼")}{" "}
+          {isExpandable && (expanded ? "▲" : "▼")}{" "}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
@@ -374,6 +387,7 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e: MouseEvent) => e.stopPropagation()}
               style={{ color: "#1a73e8", textDecoration: "none" }}
             >
               {item.title}
@@ -383,7 +397,17 @@ export function FeedCard({ item, defaultExpanded, onDelete }: { item: FeedItem; 
           )}
         </div>
       )}
-      {isKakao && expanded ? (
+      {isGmail && expanded ? (
+        gmailLoading ? (
+          <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
+        ) : gmailBody ? (
+          <div
+            onClick={(e: MouseEvent) => e.stopPropagation()}
+            style={{ fontSize: 14, color: "#3c4043", lineHeight: 1.6, overflow: "auto", maxHeight: 500 }}
+            dangerouslySetInnerHTML={{ __html: gmailBody }}
+          />
+        ) : null
+      ) : isKakao && expanded ? (
         <div style={{ fontSize: 14, color: "#3c4043", whiteSpace: "pre-wrap" }}>
           <MessageBody item={item} />
         </div>

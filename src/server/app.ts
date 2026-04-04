@@ -13,6 +13,7 @@ import { dismissRoutes } from "./routes/dismiss.js";
 import { ogRoutes } from "./routes/og.js";
 import type { Connector, SourceType } from "../connectors/types.js";
 import type { Settings } from "../db/settings-repo.js";
+import { GmailConnector } from "../connectors/gmail.js";
 
 export function buildApp(
   connectors: Map<SourceType, Connector>,
@@ -28,6 +29,15 @@ export function buildApp(
   kakaoRoutes(app);
   dismissRoutes(app, connectors);
   ogRoutes(app);
+
+  app.get<{ Params: { id: string } }>("/api/gmail/:id/body", async (req, reply) => {
+    const gmail = connectors.get("gmail");
+    if (!gmail || !(gmail instanceof GmailConnector)) {
+      return reply.status(400).send({ error: "Gmail not connected" });
+    }
+    const body = await gmail.getBody(req.params.id);
+    return { body };
+  });
 
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   app.register(fastifyStatic, {
