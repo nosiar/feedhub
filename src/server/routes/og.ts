@@ -12,7 +12,22 @@ async function fetchOgMeta(url: string): Promise<{
       redirect: "follow",
       signal: AbortSignal.timeout(5000),
     });
-    const html = await res.text();
+
+    // Detect charset from Content-Type header or HTML meta
+    const contentType = res.headers.get("content-type") ?? "";
+    const charsetMatch = contentType.match(/charset=([^\s;]+)/i);
+    const buf = Buffer.from(await res.arrayBuffer());
+
+    let charset = charsetMatch?.[1]?.toLowerCase() ?? "utf-8";
+    // MS949/EUC-KR → "euc-kr" for TextDecoder
+    if (charset === "ms949" || charset === "ks_c_5601-1987") charset = "euc-kr";
+
+    let html: string;
+    try {
+      html = new TextDecoder(charset).decode(buf);
+    } catch {
+      html = buf.toString("utf-8");
+    }
 
     const get = (property: string): string => {
       const match = html.match(
