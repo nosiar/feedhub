@@ -216,6 +216,22 @@ function getImageUrls(item: FeedItem): string[] {
   return [];
 }
 
+function getPhotoUrl(item: FeedItem): string | null {
+  return (item.metadata?.photoUrl as string) ?? null;
+}
+
+/** Render markdown-like formatting: **bold** and __italic__ */
+function MarkdownText({ text }: { text: string }): ReactNode {
+  // Split by **bold** patterns, then linkify each part
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}><Linkify text={part.slice(2, -2)} /></strong>;
+    }
+    return <Linkify key={i} text={part} />;
+  });
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -235,6 +251,8 @@ function extractFirstUrl(text: string): string | null {
 /** Shared message body for chat-like sources (kakaotalk, telegram) */
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
+  const photoUrl = getPhotoUrl(item);
+  const isTelegram = item.source === "telegram";
   const storedPreview = getLinkPreview(item);
   const [fetchedPreview, setFetchedPreview] = useState<{
     title: string; description: string; imageUrl: string; url: string;
@@ -265,12 +283,32 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
     return <ImageGallery urls={images} compact={compact} />;
   }
 
+  const TextContent = isTelegram ? MarkdownText : Linkify;
+
   return (
     <>
       <div style={{ whiteSpace: compact ? undefined : "pre-wrap" }}>
-        <Linkify text={item.body ?? ""} />
+        <TextContent text={item.body ?? ""} />
       </div>
       {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
+      {photoUrl && !compact && (
+        <div style={{ marginTop: 6 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <img
+            src={photoUrl}
+            alt=""
+            style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: "block" }}
+          />
+        </div>
+      )}
+      {photoUrl && compact && (
+        <div style={{ marginTop: 4 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <img
+            src={photoUrl}
+            alt=""
+            style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover", display: "block" }}
+          />
+        </div>
+      )}
       {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
         <div style={{ marginTop: 6, maxWidth: 320, border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>

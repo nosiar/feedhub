@@ -22,11 +22,11 @@ export function buildConnectors(settings: Settings): Map<SourceType, Connector> 
   if (config.kakaocli.enabled && settings.kakaoChats.length > 0) {
     connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocli.path, settings.kakaoChats));
   }
-  if (config.telegram.session) {
-    const chats = settings.telegramChats.length > 0
-      ? settings.telegramChats.map((c) => c.id)
-      : config.telegram.chats;
-    connectors.set("telegram", new TelegramConnector({ ...config.telegram, chats }));
+  if (config.telegram.session && settings.telegramChats.length > 0) {
+    connectors.set("telegram", new TelegramConnector({
+      ...config.telegram,
+      chats: settings.telegramChats,
+    }));
   }
 
   return connectors;

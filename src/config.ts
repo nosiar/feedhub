@@ -28,7 +28,10 @@ export const config = {
     apiId: parseInt(process.env.TELEGRAM_API_ID ?? "0", 10),
     apiHash: process.env.TELEGRAM_API_HASH ?? "",
     session: process.env.TELEGRAM_SESSION ?? "",
-    chats: (process.env.TELEGRAM_CHATS ?? "").split(",").filter(Boolean),
+    chats: (process.env.TELEGRAM_CHATS ?? "").split(",").filter(Boolean).map((entry) => {
+      const [id, ...rest] = entry.split(":");
+      return { id, name: rest.join(":") || id };
+    }),
   },
   rss: {
     feeds: (process.env.RSS_FEEDS ?? "").split(",").filter(Boolean),

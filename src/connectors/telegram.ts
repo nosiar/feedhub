@@ -7,7 +7,7 @@ interface TelegramConfig {
   apiId: number;
   apiHash: string;
   session: string;
-  chats: string[];
+  chats: { id: string; name: string }[];
 }
 
 interface LinkPreview {
@@ -59,20 +59,10 @@ export class TelegramConnector implements Connector {
     const allItems: FeedItem[] = [];
     const cursors = parseCursors(cursor);
 
-    const chatIds = this.config.chats;
-
     const targets: { id: string; title: string }[] = [];
-    if (chatIds.length > 0) {
-      for (const chatId of chatIds) {
-        try {
-          const entity = await client.getEntity(chatId);
-          const title = "title" in entity ? entity.title :
-            "firstName" in entity ? `${entity.firstName ?? ""} ${entity.lastName ?? ""}`.trim() :
-            chatId;
-          targets.push({ id: chatId, title });
-        } catch {
-          targets.push({ id: chatId, title: chatId });
-        }
+    if (this.config.chats.length > 0) {
+      for (const chat of this.config.chats) {
+        targets.push({ id: chat.id, title: chat.name });
       }
     } else {
       const dialogs = await client.getDialogs({ limit: 20 });
@@ -104,6 +94,7 @@ export class TelegramConnector implements Connector {
               : "";
 
           const imageUrls: string[] = [];
+          const hasPhoto = msg.media instanceof Api.MessageMediaPhoto;
 
           let linkPreview: LinkPreview | undefined;
           if (msg.media && msg.media instanceof Api.MessageMediaWebPage) {
@@ -129,6 +120,7 @@ export class TelegramConnector implements Connector {
               chatId: chat.id,
               messageId: msgId,
               imageUrls,
+              ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
             },
           } satisfies FeedItem;
