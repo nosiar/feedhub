@@ -110,7 +110,7 @@ export function App() {
             window.open(url, "_blank");
           }
         }
-      } else if (code >= "Digit1" && code <= "Digit9") {
+      } else if (code >= "Digit1" && code <= "Digit9" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tabIndex = parseInt(code.charAt(5), 10) - 1;
         if (tabIndex < SOURCES.length) {
           e.preventDefault();
