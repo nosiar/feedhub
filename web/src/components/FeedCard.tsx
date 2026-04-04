@@ -374,6 +374,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
           <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
         ) : gmailBody ? (
           <div
+            key="gmail-shadow"
             ref={(el) => {
               if (!el) return;
               (gmailBodyRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
