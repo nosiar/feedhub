@@ -11,6 +11,7 @@ import { settingsRoutes } from "./routes/settings.js";
 import { kakaoRoutes } from "./routes/kakao.js";
 import { dismissRoutes } from "./routes/dismiss.js";
 import { ogRoutes } from "./routes/og.js";
+import { telegramRoutes } from "./routes/telegram.js";
 import type { Connector, SourceType } from "../connectors/types.js";
 import type { Settings } from "../db/settings-repo.js";
 import { GmailConnector } from "../connectors/gmail.js";
@@ -29,6 +30,7 @@ export function buildApp(
   kakaoRoutes(app);
   dismissRoutes(app, connectors);
   ogRoutes(app);
+  telegramRoutes(app);
 
   app.get<{ Params: { id: string } }>("/api/gmail/:id/body", async (req, reply) => {
     const gmail = connectors.get("gmail");

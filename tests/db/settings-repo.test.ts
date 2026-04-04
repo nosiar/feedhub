@@ -17,7 +17,7 @@ describe("settings-repo", () => {
   it("returns default settings when none exist", async () => {
     mockFindOne.mockResolvedValue(null);
     const settings = await getSettings();
-    expect(settings).toEqual({ rssFeeds: [], kakaoChats: [] });
+    expect(settings).toEqual({ rssFeeds: [], kakaoChats: [], telegramChats: [] });
   });
 
   it("returns stored settings", async () => {

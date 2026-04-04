@@ -1,8 +1,9 @@
 // web/src/components/SettingsPage.tsx
 import { useState, useEffect } from "react";
-import { getSettings, saveSettings, type SettingsResponse, type RssFeed, type KakaoChat } from "../api.js";
+import { getSettings, saveSettings, type SettingsResponse, type RssFeed, type KakaoChat, type TelegramChat } from "../api.js";
 import { RssFeedManager } from "./RssFeedManager.js";
 import { KakaoChatManager } from "./KakaoChatManager.js";
+import { TelegramChatManager } from "./TelegramChatManager.js";
 import { SourceStatus } from "./SourceStatus.js";
 
 export function SettingsPage({ onBack }: { onBack: () => void }) {
@@ -13,11 +14,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     getSettings().then(setSettings);
   }, []);
 
-  const handleSave = async (rssFeeds: RssFeed[], kakaoChats: KakaoChat[]) => {
+  const save = async (patch: Partial<Pick<SettingsResponse, "rssFeeds" | "kakaoChats" | "telegramChats">>) => {
+    if (!settings) return;
     setSaving(true);
+    const updated = {
+      rssFeeds: patch.rssFeeds ?? settings.rssFeeds,
+      kakaoChats: patch.kakaoChats ?? settings.kakaoChats,
+      telegramChats: patch.telegramChats ?? settings.telegramChats,
+    };
     try {
-      await saveSettings({ rssFeeds, kakaoChats });
-      setSettings((prev) => (prev ? { ...prev, rssFeeds, kakaoChats } : prev));
+      await saveSettings(updated);
+      setSettings((prev) => (prev ? { ...prev, ...updated } : prev));
     } finally {
       setSaving(false);
     }
@@ -48,11 +55,15 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
 
       <RssFeedManager
         feeds={settings.rssFeeds}
-        onChange={(feeds) => handleSave(feeds, settings.kakaoChats)}
+        onChange={(feeds) => save({ rssFeeds: feeds })}
       />
       <KakaoChatManager
         chats={settings.kakaoChats}
-        onChange={(chats) => handleSave(settings.rssFeeds, chats)}
+        onChange={(chats) => save({ kakaoChats: chats })}
+      />
+      <TelegramChatManager
+        chats={settings.telegramChats}
+        onChange={(chats) => save({ telegramChats: chats })}
       />
       <SourceStatus name="Gmail" icon="📧" connected={settings.gmail.connected} />
       <SourceStatus name="Slack" icon="💬" connected={settings.slack.connected} />

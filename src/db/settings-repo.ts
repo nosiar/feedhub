@@ -3,6 +3,7 @@ import { getDb } from "./client.js";
 export interface Settings {
   rssFeeds: { url: string; title: string }[];
   kakaoChats: { id: string; name: string }[];
+  telegramChats: { id: string; name: string }[];
 }
 
 const COLLECTION = "settings";
@@ -10,10 +11,11 @@ const COLLECTION = "settings";
 export async function getSettings(): Promise<Settings> {
   const db = await getDb();
   const doc = await db.collection(COLLECTION).findOne({ _id: "global" });
-  if (!doc) return { rssFeeds: [], kakaoChats: [] };
+  if (!doc) return { rssFeeds: [], kakaoChats: [], telegramChats: [] };
   return {
     rssFeeds: doc.rssFeeds ?? [],
     kakaoChats: doc.kakaoChats ?? [],
+    telegramChats: doc.telegramChats ?? [],
   };
 }
 

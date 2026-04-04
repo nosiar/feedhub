@@ -13,12 +13,13 @@ export function settingsRoutes(
       ...settings,
       gmail: { connected: !!config.gmail.refreshToken },
       slack: { connected: !!config.slack.botToken },
+      telegram: { connected: !!config.telegram.session },
     };
   });
 
   app.put("/api/settings", async (req) => {
-    const { rssFeeds, kakaoChats } = req.body as Settings;
-    const settings = { rssFeeds, kakaoChats };
+    const { rssFeeds, kakaoChats, telegramChats } = req.body as Settings;
+    const settings = { rssFeeds, kakaoChats, telegramChats };
     await saveSettings(settings);
     onSettingsChanged(settings);
     return { ok: true };

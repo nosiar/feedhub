@@ -83,11 +83,18 @@ export interface KakaoChat {
   name: string;
 }
 
+export interface TelegramChat {
+  id: string;
+  name: string;
+}
+
 export interface SettingsResponse {
   rssFeeds: RssFeed[];
   kakaoChats: KakaoChat[];
+  telegramChats: TelegramChat[];
   gmail: { connected: boolean };
   slack: { connected: boolean };
+  telegram: { connected: boolean };
 }
 
 export async function getSettings(): Promise<SettingsResponse> {
@@ -98,6 +105,7 @@ export async function getSettings(): Promise<SettingsResponse> {
 export async function saveSettings(data: {
   rssFeeds: RssFeed[];
   kakaoChats: KakaoChat[];
+  telegramChats: TelegramChat[];
 }): Promise<void> {
   await fetch(`${BASE}/settings`, {
     method: "PUT",
@@ -110,6 +118,13 @@ export async function fetchKakaoChats(): Promise<{
   chats: { id: string; name: string; type: string; memberCount: number }[];
 }> {
   const res = await fetch(`${BASE}/kakao/chats`);
+  return res.json();
+}
+
+export async function fetchTelegramChats(): Promise<{
+  chats: { id: string; name: string; type: string; unreadCount: number }[];
+}> {
+  const res = await fetch(`${BASE}/telegram/chats`);
   return res.json();
 }
 

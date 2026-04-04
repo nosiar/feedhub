@@ -23,7 +23,10 @@ export function buildConnectors(settings: Settings): Map<SourceType, Connector> 
     connectors.set("kakaotalk", new KakaotalkConnector(config.kakaocli.path, settings.kakaoChats));
   }
   if (config.telegram.session) {
-    connectors.set("telegram", new TelegramConnector(config.telegram));
+    const chats = settings.telegramChats.length > 0
+      ? settings.telegramChats.map((c) => c.id)
+      : config.telegram.chats;
+    connectors.set("telegram", new TelegramConnector({ ...config.telegram, chats }));
   }
 
   return connectors;
