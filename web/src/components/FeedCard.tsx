@@ -302,6 +302,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
   const gmailBodyRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => setLocalToggle(null), [defaultExpanded]);
   const expanded = expandedByKey ?? localToggle ?? (isChat && !!defaultExpanded);
 
@@ -312,6 +313,17 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
       fetchGmailBody(item.id).then(setGmailBody).finally(() => setGmailLoading(false));
     }
   }, [expanded, isGmail, gmailBody, gmailLoading, item.id]);
+
+  // Window-level key handler when Gmail is expanded (Shadow DOM swallows events)
+  useEffect(() => {
+    if (!isGmail || !expanded) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setLocalToggle(false); }
+      if (e.key === "d" || e.key === "x") { onDelete?.(item); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isGmail, expanded, item, onDelete]);
 
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
@@ -392,10 +404,6 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expandedByK
                 wrapper.tabIndex = 0;
                 wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;";
                 wrapper.innerHTML = gmailBody;
-                wrapper.addEventListener("keydown", (e) => {
-                  if (e.key === "Escape") { setLocalToggle(false); }
-                  if (e.key === "d" || e.key === "x") { onDelete?.(item); }
-                });
                 shadow.appendChild(wrapper);
                 wrapper.focus();
               }
