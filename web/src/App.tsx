@@ -41,13 +41,20 @@ export function App() {
     setDismissedItems((prev) => new Set(prev).add(key));
     setToast({ item });
 
+    // Adjust focusedIndex: compute dismissed item's position from current items
+    setFocusedIndex((prev) => {
+      const currentVisible = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`) && `${i.source}-${i.id}` !== key);
+      if (prev >= currentVisible.length) return Math.max(currentVisible.length - 1, 0);
+      return prev;
+    });
+
     // Schedule server dismiss
     dismissTimer.current = setTimeout(() => {
       dismissFeedItem(item.source, item.id);
       setToast(null);
       dismissTimer.current = null;
     }, UNDO_DELAY);
-  }, [toast]);
+  }, [toast, items, dismissedItems]);
 
   const handleUndo = useCallback(() => {
     if (!toast) return;
@@ -104,9 +111,6 @@ export function App() {
         e.preventDefault();
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           handleDismiss(visibleItems[focusedIndex]);
-          if (focusedIndex >= visibleItems.length - 1) {
-            setFocusedIndex((prev) => Math.max(prev - 1, 0));
-          }
           setExpandedIndex(null);
         }
       } else if (code === "KeyV") {
