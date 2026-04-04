@@ -291,21 +291,12 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
         <TextContent text={item.body ?? ""} />
       </div>
       {images.length > 0 && <ImageGallery urls={images} compact={compact} />}
-      {photoUrl && !compact && (
+      {photoUrl && (
         <div style={{ marginTop: 6 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
           <img
             src={photoUrl}
             alt=""
             style={{ maxWidth: 400, maxHeight: 300, borderRadius: 8, display: "block" }}
-          />
-        </div>
-      )}
-      {photoUrl && compact && (
-        <div style={{ marginTop: 4 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
-          <img
-            src={photoUrl}
-            alt=""
-            style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover", display: "block" }}
           />
         </div>
       )}
@@ -317,6 +308,25 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
             <div style={{ height: 14, width: "70%", background: "#e8e8e8", borderRadius: 4, marginBottom: 8 }} />
             <div style={{ height: 10, width: "90%", background: "#f0f0f0", borderRadius: 4 }} />
           </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Compact media only (images/photos, no text) for collapsed cards */
+function CompactMedia({ item }: { item: FeedItem }) {
+  const images = getImageUrls(item);
+  const photoUrl = getPhotoUrl(item);
+  const isPhotoOnly =
+    images.length > 0 && (!item.body || item.body === "사진" || item.body.match(/^사진 \d+장$/));
+
+  return (
+    <>
+      {(isPhotoOnly || images.length > 0) && <ImageGallery urls={images} compact />}
+      {photoUrl && (
+        <div style={{ marginTop: 4 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <img src={photoUrl} alt="" style={{ width: 80, height: 80, borderRadius: 6, objectFit: "cover", display: "block" }} />
         </div>
       )}
     </>
@@ -431,11 +441,14 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
           <MessageBody item={item} />
         </div>
       ) : (
-        <div style={{
-          fontSize: 14, color: "#3c4043", overflow: "hidden", textOverflow: "ellipsis",
-          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-        }}>
-          {isChat ? <MessageBody item={item} compact /> : item.body}
+        <div style={{ fontSize: 14, color: "#3c4043" }}>
+          <div style={{
+            overflow: "hidden", textOverflow: "ellipsis",
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+          }}>
+            {isChat ? <Linkify text={item.body ?? ""} /> : item.body}
+          </div>
+          {isChat && <CompactMedia item={item} />}
         </div>
       )}
     </div>
