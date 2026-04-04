@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type MouseEvent, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
 import { fetchOgPreview, fetchGmailBody } from "../api.js";
 
@@ -302,7 +302,6 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
   const expanded = expandedProp ?? (isChat && !!defaultExpanded);
   const [gmailBody, setGmailBody] = useState<string | null>(null);
   const [gmailLoading, setGmailLoading] = useState(false);
-  const gmailBodyRef = useRef<HTMLDivElement>(null);
 
   // Fetch Gmail body when expanded
   useEffect(() => {
@@ -376,17 +375,14 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
           <div
             key="gmail-shadow"
             ref={(el) => {
-              if (!el) return;
-              (gmailBodyRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-              if (!el.shadowRoot) {
-                const shadow = el.attachShadow({ mode: "open" });
-                const wrapper = document.createElement("div");
-                wrapper.tabIndex = 0;
-                wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;";
-                wrapper.innerHTML = gmailBody;
-                shadow.appendChild(wrapper);
-                wrapper.focus();
-              }
+              if (!el || el.shadowRoot) return;
+              const shadow = el.attachShadow({ mode: "open" });
+              const wrapper = document.createElement("div");
+              wrapper.tabIndex = 0;
+              wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;";
+              wrapper.innerHTML = gmailBody;
+              shadow.appendChild(wrapper);
+              wrapper.focus();
             }}
             onClick={(e: MouseEvent) => e.stopPropagation()}
             style={{ outline: "none" }}
