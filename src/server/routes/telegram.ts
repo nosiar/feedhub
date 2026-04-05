@@ -82,4 +82,53 @@ export function telegramRoutes(app: FastifyInstance): void {
         .send(buffer);
     }
   );
+
+  // In-memory video cache (cleared on server restart)
+  const videoCache = new Map<string, { data: Buffer; mime: string }>();
+
+  app.get<{ Params: { chatId: string; msgId: string } }>(
+    "/api/telegram/video/:chatId/:msgId",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
+      }
+
+      const { chatId, msgId } = req.params;
+      const cacheKey = `${chatId}_${msgId}`;
+
+      const cached = videoCache.get(cacheKey);
+      if (cached) {
+        return reply
+          .header("Content-Type", cached.mime)
+          .header("Cache-Control", "public, max-age=86400")
+          .send(cached.data);
+      }
+
+      const client = await getClient();
+      const msgs = await client.getMessages(chatId, { ids: [parseInt(msgId, 10)] });
+      const msg = msgs[0];
+
+      if (
+        !msg?.media
+        || !(msg.media instanceof Api.MessageMediaDocument)
+        || !(msg.media.document instanceof Api.Document)
+        || !msg.media.document.mimeType?.startsWith("video/")
+      ) {
+        return reply.status(404).send({ error: "Video not found" });
+      }
+
+      const mime = msg.media.document.mimeType;
+      const buffer = (await client.downloadMedia(msg.media, {})) as Buffer;
+      if (!buffer) {
+        return reply.status(404).send({ error: "Download failed" });
+      }
+
+      videoCache.set(cacheKey, { data: buffer, mime });
+
+      return reply
+        .header("Content-Type", mime)
+        .header("Cache-Control", "public, max-age=86400")
+        .send(buffer);
+    }
+  );
 }

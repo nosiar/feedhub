@@ -220,6 +220,10 @@ function getPhotoUrl(item: FeedItem): string | null {
   return (item.metadata?.photoUrl as string) ?? null;
 }
 
+function getVideoUrl(item: FeedItem): string | null {
+  return (item.metadata?.videoUrl as string) ?? null;
+}
+
 /** Render markdown-like formatting: **bold** and __italic__ */
 function MarkdownText({ text }: { text: string }): ReactNode {
   // Split by **bold** patterns, then linkify each part
@@ -252,6 +256,7 @@ function extractFirstUrl(text: string): string | null {
 function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
+  const videoUrl = getVideoUrl(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
   const storedPreview = getLinkPreview(item);
@@ -291,6 +296,16 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
       <div style={{ whiteSpace: compact ? undefined : "pre-wrap" }}>
         <TextContent text={item.body ?? ""} />
       </div>
+      {videoUrl && (
+        <div style={{ marginTop: 6 }} onClick={(e: MouseEvent) => e.stopPropagation()}>
+          <video
+            src={videoUrl}
+            controls
+            preload="metadata"
+            style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }}
+          />
+        </div>
+      )}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
       {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
@@ -310,11 +325,17 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
 function CompactMedia({ item }: { item: FeedItem }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
+  const videoUrl = getVideoUrl(item);
   const unsupported = item.metadata?.unsupportedMedia;
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
 
   return (
     <>
+      {videoUrl && (
+        <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#e8f0fe", borderRadius: 4, fontSize: 11, color: "#1a73e8" }}>
+          🎬 영상
+        </span>
+      )}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} compact />}
       {unsupported && (
         <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, fontSize: 11, color: "#999" }}>

@@ -95,6 +95,9 @@ export class TelegramConnector implements Connector {
 
           const imageUrls: string[] = [];
           const hasPhoto = msg.media instanceof Api.MessageMediaPhoto;
+          const hasVideo = msg.media instanceof Api.MessageMediaDocument
+            && msg.media.document instanceof Api.Document
+            && (msg.media.document.mimeType?.startsWith("video/") ?? false);
 
           let linkPreview: LinkPreview | undefined;
           if (msg.media && msg.media instanceof Api.MessageMediaWebPage) {
@@ -121,6 +124,7 @@ export class TelegramConnector implements Connector {
               messageId: msgId,
               imageUrls,
               ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
+              ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
               ...(msg.media?.className === "MessageMediaUnsupported" ? { unsupportedMedia: true } : {}),
             },
