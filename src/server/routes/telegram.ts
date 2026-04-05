@@ -116,4 +116,33 @@ export function telegramRoutes(app: FastifyInstance): void {
         .send(buffer);
     }
   );
+
+  app.get<{ Params: { chatId: string; msgId: string } }>(
+    "/api/telegram/poll/:chatId/:msgId",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
+      }
+
+      const { chatId, msgId } = req.params;
+      const client = await getClient();
+      const msgs = await client.getMessages(chatId, { ids: [parseInt(msgId, 10)] });
+      const msg = msgs[0];
+
+      if (!msg?.media || !(msg.media instanceof Api.MessageMediaPoll)) {
+        return reply.status(404).send({ error: "Poll not found" });
+      }
+
+      const { poll, results } = msg.media;
+      return {
+        question: poll.question.text ?? "",
+        closed: poll.closed ?? false,
+        answers: poll.answers.map((a, i) => ({
+          text: a.text.text ?? "",
+          voters: results.results?.[i]?.voters ?? 0,
+        })),
+        totalVoters: results.totalVoters ?? 0,
+      };
+    }
+  );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { fetchOgPreview, fetchGmailBody } from "../api.js";
+import { fetchOgPreview, fetchGmailBody, fetchPollResults, type PollResult } from "../api.js";
 
 // --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
 const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
@@ -224,6 +224,66 @@ function getVideoUrl(item: FeedItem): string | null {
   return (item.metadata?.videoUrl as string) ?? null;
 }
 
+function getPoll(item: FeedItem): { question: string; answers: string[]; pollUrl: string } | null {
+  const poll = item.metadata?.poll as { question: string; answers: string[] } | undefined;
+  const pollUrl = item.metadata?.pollUrl as string | undefined;
+  if (poll && pollUrl) return { ...poll, pollUrl };
+  return null;
+}
+
+function PollCard({ pollUrl, poll, expanded }: {
+  pollUrl: string;
+  poll: { question: string; answers: string[] };
+  expanded?: boolean;
+}) {
+  const [results, setResults] = useState<PollResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (!expanded || fetched) return;
+    setFetched(true);
+    setLoading(true);
+    fetchPollResults(pollUrl).then(setResults).finally(() => setLoading(false));
+  }, [expanded, fetched, pollUrl]);
+
+  const answers = results?.answers ?? poll.answers.map((text) => ({ text, voters: 0 }));
+  const totalVoters = results?.totalVoters ?? 0;
+  const hasResults = totalVoters > 0;
+
+  return (
+    <div
+      onClick={(e: MouseEvent) => e.stopPropagation()}
+      style={{ marginTop: 8, padding: 12, background: "#f8f9fa", borderRadius: 10, border: "1px solid #e0e0e0", maxWidth: 360 }}
+    >
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
+        📊 {results?.question ?? poll.question}
+      </div>
+      {answers.map((a, i) => {
+        const pct = hasResults ? Math.round((a.voters / totalVoters) * 100) : 0;
+        return (
+          <div key={i} style={{ marginBottom: 4, position: "relative" }}>
+            {hasResults && (
+              <div style={{
+                position: "absolute", top: 0, left: 0, height: "100%",
+                width: `${pct}%`, background: "#e8f0fe", borderRadius: 6, transition: "width 0.3s",
+              }} />
+            )}
+            <div style={{ position: "relative", padding: "6px 10px", fontSize: 13, display: "flex", justifyContent: "space-between" }}>
+              <span>{a.text}</span>
+              {hasResults && <span style={{ color: "#5f6368", fontSize: 12 }}>{pct}%</span>}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 11, color: "#999", marginTop: 6 }}>
+        {loading ? "결과 불러오는 중..." : hasResults ? `👥 ${totalVoters}명 투표` : "투표 결과 없음"}
+        {results?.closed && " · 마감됨"}
+      </div>
+    </div>
+  );
+}
+
 /** Render markdown-like formatting: **bold** and __italic__ */
 function MarkdownText({ text }: { text: string }): ReactNode {
   // Split by **bold** patterns, then linkify each part
@@ -257,6 +317,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
+  const poll = getPoll(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
   const storedPreview = getLinkPreview(item);
@@ -306,6 +367,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
           />
         </div>
       )}
+      {poll && <PollCard pollUrl={poll.pollUrl} poll={poll} expanded={!compact} />}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
       {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
@@ -326,6 +388,7 @@ function CompactMedia({ item }: { item: FeedItem }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
+  const poll = getPoll(item);
   const unsupported = item.metadata?.unsupportedMedia;
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
 
@@ -334,6 +397,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
       {videoUrl && (
         <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#e8f0fe", borderRadius: 4, fontSize: 11, color: "#1a73e8" }}>
           🎬 영상
+        </span>
+      )}
+      {poll && (
+        <span style={{ display: "inline-block", marginTop: 4, marginLeft: videoUrl ? 4 : 0, padding: "2px 8px", background: "#fef7e0", borderRadius: 4, fontSize: 11, color: "#b5880a" }}>
+          📊 투표
         </span>
       )}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} compact />}

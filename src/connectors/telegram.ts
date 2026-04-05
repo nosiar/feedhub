@@ -99,6 +99,14 @@ export class TelegramConnector implements Connector {
             && msg.media.document instanceof Api.Document
             && (msg.media.document.mimeType?.startsWith("video/") ?? false);
 
+          let poll: { question: string; answers: string[] } | undefined;
+          if (msg.media instanceof Api.MessageMediaPoll) {
+            poll = {
+              question: msg.media.poll.question.text ?? "",
+              answers: msg.media.poll.answers.map((a) => a.text.text ?? ""),
+            };
+          }
+
           let linkPreview: LinkPreview | undefined;
           if (msg.media && msg.media instanceof Api.MessageMediaWebPage) {
             const page = msg.media.webpage;
@@ -125,6 +133,7 @@ export class TelegramConnector implements Connector {
               imageUrls,
               ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
               ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}` } : {}),
+              ...(poll ? { poll, pollUrl: `/api/telegram/poll/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
               ...(msg.media?.className === "MessageMediaUnsupported" ? { unsupportedMedia: true } : {}),
             },

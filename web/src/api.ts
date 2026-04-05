@@ -128,6 +128,23 @@ export async function fetchTelegramChats(): Promise<{
   return res.json();
 }
 
+export interface PollResult {
+  question: string;
+  closed: boolean;
+  answers: { text: string; voters: number }[];
+  totalVoters: number;
+}
+
+export async function fetchPollResults(pollUrl: string): Promise<PollResult | null> {
+  try {
+    const res = await fetch(pollUrl);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchRssTitle(url: string): Promise<string> {
   try {
     const res = await fetch(`${BASE}/settings/rss-title?url=${encodeURIComponent(url)}`);
