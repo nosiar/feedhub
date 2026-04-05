@@ -83,7 +83,7 @@ export class GmailConnector implements Connector {
       format: "full",
     });
 
-    const findBody = (parts: typeof detail.data.payload.parts, mimeType: string): string | null => {
+    const findBody = (parts: { mimeType?: string | null; body?: { data?: string | null } | null; parts?: any[] }[] | undefined | null, mimeType: string): string | null => {
       if (!parts) return null;
       for (const part of parts) {
         if (part.mimeType === mimeType && part.body?.data) {

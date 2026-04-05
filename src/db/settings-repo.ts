@@ -10,7 +10,7 @@ const COLLECTION = "settings";
 
 export async function getSettings(): Promise<Settings> {
   const db = await getDb();
-  const doc = await db.collection(COLLECTION).findOne({ _id: "global" });
+  const doc = await db.collection(COLLECTION).findOne({ _id: "global" as any });
   if (!doc) return { rssFeeds: [], kakaoChats: [], telegramChats: [] };
   return {
     rssFeeds: doc.rssFeeds ?? [],
@@ -22,8 +22,8 @@ export async function getSettings(): Promise<Settings> {
 export async function saveSettings(settings: Settings): Promise<void> {
   const db = await getDb();
   await db.collection(COLLECTION).replaceOne(
-    { _id: "global" },
-    { _id: "global", ...settings },
+    { _id: "global" as any },
+    { _id: "global" as any, ...settings },
     { upsert: true }
   );
 }
@@ -33,8 +33,8 @@ export async function seedSettings(
   envKakaoChats: { id: string; name: string }[]
 ): Promise<void> {
   const db = await getDb();
-  const existing = await db.collection(COLLECTION).findOne({ _id: "global" });
+  const existing = await db.collection(COLLECTION).findOne({ _id: "global" as any });
   if (existing) return;
   const rssFeeds = envRssFeeds.map((url) => ({ url, title: "" }));
-  await saveSettings({ rssFeeds, kakaoChats: envKakaoChats });
+  await saveSettings({ rssFeeds, kakaoChats: envKakaoChats, telegramChats: [] });
 }
