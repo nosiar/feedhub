@@ -29,16 +29,25 @@ async function fetchOgMeta(url: string): Promise<{
       html = buf.toString("utf-8");
     }
 
+    const decodeEntities = (s: string): string =>
+      s.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'");
+
     const get = (property: string): string => {
       const match = html.match(
         new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']*)["']`, "i")
       ) ?? html.match(
         new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${property}["']`, "i")
       );
-      return match?.[1] ?? "";
+      return decodeEntities(match?.[1] ?? "");
     };
 
-    const title = get("og:title") || get("twitter:title") || (html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? "");
+    const title = get("og:title") || get("twitter:title") || decodeEntities(html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? "");
     if (!title) return null;
 
     return {
