@@ -22,6 +22,7 @@ export function Toast({
         gap: 16,
         zIndex: 9999,
         boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        maxWidth: "calc(100vw - 32px)",
       }}
     >
       <span>{message}</span>

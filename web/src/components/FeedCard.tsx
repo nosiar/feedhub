@@ -374,6 +374,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
         border: expanded ? "1px solid #4285F4" : focused ? "1px solid #90b8f8" : "1px solid #e0e0e0",
         cursor: isExpandable ? "pointer" : "default",
         transition: "all 0.15s",
+        overflow: "hidden", wordBreak: "break-word" as const,
         outline: "none",
       }}
     >
@@ -419,7 +420,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
               const shadow = el.attachShadow({ mode: "open" });
               const wrapper = document.createElement("div");
               wrapper.tabIndex = 0;
-              wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;";
+              wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;word-break:break-word;";
               wrapper.innerHTML = gmailBody;
               shadow.appendChild(wrapper);
               wrapper.focus();

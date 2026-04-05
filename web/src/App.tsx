@@ -217,7 +217,7 @@ export function App() {
             onClick={handleSync}
             disabled={syncing}
             style={{
-              padding: "8px 16px",
+              padding: "6px 12px",
               background: syncing ? "#93b5f1" : "#4285F4",
               color: "#fff",
               border: "none",
@@ -237,9 +237,9 @@ export function App() {
         </div>
       </div>
       <SearchBar onSearch={setQuery} />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <SourceFilter current={source} onChange={setSource} />
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
           {hasChat && (
             <button
               onClick={() => setExpandAll(!expandAll)}

@@ -15,13 +15,13 @@ export function SourceFilter({
   onChange: (s: string | undefined) => void;
 }) {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+    <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
       {SOURCES.map((s) => (
         <button
           key={s.label}
           onClick={() => onChange(s.key)}
           style={{
-            padding: "8px 16px",
+            padding: "6px 12px",
             border: "1px solid #ddd",
             borderRadius: 20,
             background: current === s.key ? "#4285F4" : "#fff",
