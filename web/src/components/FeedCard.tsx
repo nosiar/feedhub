@@ -307,14 +307,21 @@ function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded
     }).finally(() => setLoading(false));
   }, [expanded, fetched, repliesUrl]);
 
-  const loadMore = useCallback(() => {
+  const loadAll = useCallback(async () => {
     if (loading || !hasMore || replies.length === 0) return;
     setLoading(true);
-    const lastId = replies[replies.length - 1].id;
-    fetchReplies(repliesUrl, lastId).then((res) => {
-      setReplies((prev) => [...prev, ...res.replies]);
-      setHasMore(res.hasMore);
-    }).finally(() => setLoading(false));
+    let all = [...replies];
+    let offsetId = all[all.length - 1].id;
+    let more = true;
+    while (more) {
+      const res = await fetchReplies(repliesUrl, offsetId);
+      all = [...all, ...res.replies];
+      more = res.hasMore;
+      if (res.replies.length > 0) offsetId = res.replies[res.replies.length - 1].id;
+    }
+    setReplies(all);
+    setHasMore(false);
+    setLoading(false);
   }, [repliesUrl, replies, hasMore, loading]);
 
   if (!expanded || (!fetched && replies.length === 0)) return null;
@@ -352,7 +359,7 @@ function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded
       {loading && <div style={{ fontSize: 12, color: "#999" }}>불러오는 중...</div>}
       {hasMore && !loading && (
         <button
-          onClick={loadMore}
+          onClick={loadAll}
           style={{
             background: "none", border: "none", color: "#1a73e8",
             fontSize: 12, cursor: "pointer", padding: "4px 0",
