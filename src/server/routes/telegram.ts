@@ -197,11 +197,13 @@ export function telegramRoutes(app: FastifyInstance): void {
       for (const m of messages) batchMap.set(m.id, m);
 
       // Collect replyToMsgIds that are NOT in the current batch
+      // Only for replies-to-replies (replyToTopId exists), not direct replies to the top post
       const missingIds = new Set<number>();
       for (const m of messages) {
-        const replyId = m.replyTo && "replyToMsgId" in m.replyTo
-          ? m.replyTo.replyToMsgId : undefined;
-        if (replyId && !batchMap.has(replyId)) {
+        const rt = m.replyTo && "replyToMsgId" in m.replyTo ? m.replyTo : undefined;
+        const replyId = rt?.replyToMsgId;
+        const isReplyToReply = rt && "replyToTopId" in rt && rt.replyToTopId;
+        if (replyId && isReplyToReply && !batchMap.has(replyId)) {
           missingIds.add(replyId);
         }
       }
@@ -243,8 +245,9 @@ export function telegramRoutes(app: FastifyInstance): void {
             author = channelName;
           }
 
-          const replyToMsgId = m.replyTo && "replyToMsgId" in m.replyTo
-            ? m.replyTo.replyToMsgId : undefined;
+          const rt = m.replyTo && "replyToMsgId" in m.replyTo ? m.replyTo : undefined;
+          const isReplyToReply = rt && "replyToTopId" in rt && rt.replyToTopId;
+          const replyToMsgId = isReplyToReply ? rt.replyToMsgId : undefined;
 
           let replyTo: { msgId: number; text: string; author: string } | undefined;
           if (replyToMsgId) {
