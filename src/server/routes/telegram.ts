@@ -145,4 +145,57 @@ export function telegramRoutes(app: FastifyInstance): void {
       };
     }
   );
+
+  app.get<{ Params: { chatId: string; msgId: string }; Querystring: { offsetId?: string; limit?: string } }>(
+    "/api/telegram/replies/:chatId/:msgId",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
+      }
+
+      const { chatId, msgId } = req.params;
+      const offsetId = parseInt(req.query.offsetId ?? "0", 10);
+      const limit = Math.min(parseInt(req.query.limit ?? "10", 10), 50);
+
+      const client = await getClient();
+      const result = await client.invoke(
+        new Api.messages.GetReplies({
+          peer: chatId,
+          msgId: parseInt(msgId, 10),
+          offsetId,
+          offsetDate: 0,
+          addOffset: 0,
+          limit,
+          maxId: 0,
+          minId: 0,
+          hash: BigInt(0) as unknown as Api.long,
+        })
+      );
+
+      const users = new Map<string, string>();
+      if ("users" in result && Array.isArray(result.users)) {
+        for (const u of result.users) {
+          if ("id" in u && "firstName" in u) {
+            const user = u as Api.User;
+            users.set(user.id.toString(), `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim());
+          }
+        }
+      }
+
+      const messages = ("messages" in result && Array.isArray(result.messages))
+        ? result.messages as Api.Message[] : [];
+
+      return {
+        replies: messages.map((m) => ({
+          id: m.id,
+          text: m.message ?? "",
+          author: users.get(
+            (m.fromId && "userId" in m.fromId) ? m.fromId.userId.toString() : ""
+          ) ?? "",
+          timestamp: m.date ? new Date(m.date * 1000).toISOString() : null,
+        })),
+        hasMore: messages.length === limit,
+      };
+    }
+  );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { fetchOgPreview, fetchGmailBody, fetchPollResults, type PollResult } from "../api.js";
+import { fetchOgPreview, fetchGmailBody, fetchPollResults, fetchReplies, type PollResult, type ReplyItem } from "../api.js";
 
 // --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
 const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
@@ -224,6 +224,13 @@ function getVideoUrl(item: FeedItem): string | null {
   return (item.metadata?.videoUrl as string) ?? null;
 }
 
+function getReplies(item: FeedItem): { replyCount: number; repliesUrl: string } | null {
+  const count = item.metadata?.replyCount as number | undefined;
+  const url = item.metadata?.repliesUrl as string | undefined;
+  if (url && typeof count === "number") return { replyCount: count, repliesUrl: url };
+  return null;
+}
+
 function getPoll(item: FeedItem): { question: string; answers: string[]; pollUrl: string } | null {
   const poll = item.metadata?.poll as { question: string; answers: string[] } | undefined;
   const pollUrl = item.metadata?.pollUrl as string | undefined;
@@ -284,6 +291,64 @@ function PollCard({ pollUrl, poll, expanded }: {
   );
 }
 
+function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded?: boolean }) {
+  const [replies, setReplies] = useState<ReplyItem[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetched, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (!expanded || fetched) return;
+    setFetched(true);
+    setLoading(true);
+    fetchReplies(repliesUrl).then((res) => {
+      setReplies(res.replies);
+      setHasMore(res.hasMore);
+    }).finally(() => setLoading(false));
+  }, [expanded, fetched, repliesUrl]);
+
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore || replies.length === 0) return;
+    setLoading(true);
+    const lastId = replies[replies.length - 1].id;
+    fetchReplies(repliesUrl, lastId).then((res) => {
+      setReplies((prev) => [...prev, ...res.replies]);
+      setHasMore(res.hasMore);
+    }).finally(() => setLoading(false));
+  }, [repliesUrl, replies, hasMore, loading]);
+
+  if (!expanded || (!fetched && replies.length === 0)) return null;
+
+  return (
+    <div
+      onClick={(e: MouseEvent) => e.stopPropagation()}
+      style={{ marginTop: 10, borderTop: "1px solid #e0e0e0", paddingTop: 8 }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#5f6368", marginBottom: 6 }}>
+        💬 댓글
+      </div>
+      {replies.map((r) => (
+        <div key={r.id} style={{ marginBottom: 6, fontSize: 13 }}>
+          <span style={{ fontWeight: 600, color: "#1a73e8", marginRight: 6 }}>{r.author || "익명"}</span>
+          <span style={{ color: "#3c4043" }}>{r.text}</span>
+        </div>
+      ))}
+      {loading && <div style={{ fontSize: 12, color: "#999" }}>불러오는 중...</div>}
+      {hasMore && !loading && (
+        <button
+          onClick={loadMore}
+          style={{
+            background: "none", border: "none", color: "#1a73e8",
+            fontSize: 12, cursor: "pointer", padding: "4px 0",
+          }}
+        >
+          더 보기
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Render markdown-like formatting: **bold** and __italic__ */
 function MarkdownText({ text }: { text: string }): ReactNode {
   // Split by **bold** patterns, then linkify each part
@@ -318,6 +383,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
   const poll = getPoll(item);
+  const repliesInfo = getReplies(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
   const storedPreview = getLinkPreview(item);
@@ -369,6 +435,9 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
       )}
       {poll && <PollCard pollUrl={poll.pollUrl} poll={poll} expanded={!compact} />}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
+      {repliesInfo && repliesInfo.replyCount > 0 && (
+        <RepliesSection repliesUrl={repliesInfo.repliesUrl} expanded={!compact} />
+      )}
       {preview && !compact && <LinkPreviewCard preview={preview} imageLoading={ogLoading} />}
       {showSkeleton && (
         <div style={{ marginTop: 6, maxWidth: 320, border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
@@ -389,6 +458,7 @@ function CompactMedia({ item }: { item: FeedItem }) {
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
   const poll = getPoll(item);
+  const repliesInfo = getReplies(item);
   const unsupported = item.metadata?.unsupportedMedia;
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
 
@@ -402,6 +472,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
       {poll && (
         <span style={{ display: "inline-block", marginTop: 4, marginLeft: videoUrl ? 4 : 0, padding: "2px 8px", background: "#fef7e0", borderRadius: 4, fontSize: 11, color: "#b5880a" }}>
           📊 투표
+        </span>
+      )}
+      {repliesInfo && repliesInfo.replyCount > 0 && (
+        <span style={{ display: "inline-block", marginTop: 4, marginLeft: (videoUrl || poll) ? 4 : 0, padding: "2px 8px", background: "#f0f0f0", borderRadius: 4, fontSize: 11, color: "#5f6368" }}>
+          💬 {repliesInfo.replyCount}
         </span>
       )}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} compact />}

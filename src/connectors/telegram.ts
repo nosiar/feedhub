@@ -135,6 +135,10 @@ export class TelegramConnector implements Connector {
               ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}` } : {}),
               ...(poll ? { poll, pollUrl: `/api/telegram/poll/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
+              ...(msg.replies?.comments ? {
+                replyCount: msg.replies.replies ?? 0,
+                repliesUrl: `/api/telegram/replies/${chat.id}/${msgId}`,
+              } : {}),
               ...(msg.media?.className === "MessageMediaUnsupported" ? { unsupportedMedia: true } : {}),
             },
           } satisfies FeedItem;

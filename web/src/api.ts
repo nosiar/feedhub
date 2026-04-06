@@ -145,6 +145,28 @@ export async function fetchPollResults(pollUrl: string): Promise<PollResult | nu
   }
 }
 
+export interface ReplyItem {
+  id: number;
+  text: string;
+  author: string;
+  timestamp: string | null;
+}
+
+export interface RepliesResult {
+  replies: ReplyItem[];
+  hasMore: boolean;
+}
+
+export async function fetchReplies(
+  repliesUrl: string,
+  offsetId?: number
+): Promise<RepliesResult> {
+  const url = offsetId ? `${repliesUrl}?offsetId=${offsetId}&limit=10` : `${repliesUrl}?limit=10`;
+  const res = await fetch(url);
+  if (!res.ok) return { replies: [], hasMore: false };
+  return res.json();
+}
+
 export async function fetchRssTitle(url: string): Promise<string> {
   try {
     const res = await fetch(`${BASE}/settings/rss-title?url=${encodeURIComponent(url)}`);
