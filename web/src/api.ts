@@ -150,6 +150,7 @@ export interface ReplyItem {
   text: string;
   author: string;
   isChannel?: boolean;
+  replyTo?: { msgId: number; text: string; author: string };
   timestamp: string | null;
 }
 

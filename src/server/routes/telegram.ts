@@ -192,20 +192,83 @@ export function telegramRoutes(app: FastifyInstance): void {
       const messages = ("messages" in result && Array.isArray(result.messages))
         ? result.messages as Api.Message[] : [];
 
+      // Build map of current batch message IDs for quick lookup
+      const batchMap = new Map<number, Api.Message>();
+      for (const m of messages) batchMap.set(m.id, m);
+
+      // Collect replyToMsgIds that are NOT in the current batch
+      const missingIds = new Set<number>();
+      for (const m of messages) {
+        const replyId = m.replyTo && "replyToMsgId" in m.replyTo
+          ? m.replyTo.replyToMsgId : undefined;
+        if (replyId && !batchMap.has(replyId)) {
+          missingIds.add(replyId);
+        }
+      }
+
+      // Batch-fetch missing referenced messages from the discussion group
+      const refMap = new Map<number, { text: string; author: string }>();
+      if (missingIds.size > 0) {
+        const discussionChatId = ("chats" in result && Array.isArray(result.chats) && result.chats[0])
+          ? result.chats[0].id.toString() : chatId;
+        try {
+          const refMsgs = await client.getMessages(`-100${discussionChatId}`, {
+            ids: [...missingIds],
+          });
+          for (const rm of refMsgs) {
+            if (!rm) continue;
+            let refAuthor = "";
+            if (rm.fromId && "userId" in rm.fromId) {
+              refAuthor = users.get(rm.fromId.userId.toString()) ?? "";
+            } else if (!rm.fromId) {
+              refAuthor = channelName;
+            }
+            // If author not in users map, try to get from the message's sender
+            if (!refAuthor && rm.sender && "firstName" in rm.sender) {
+              refAuthor = `${rm.sender.firstName ?? ""} ${rm.sender.lastName ?? ""}`.trim();
+            }
+            refMap.set(rm.id, { text: rm.message ?? "", author: refAuthor });
+          }
+        } catch {
+          // Ignore fetch errors for referenced messages
+        }
+      }
+
       return {
         replies: messages.map((m) => {
           let author = "";
           if (m.fromId && "userId" in m.fromId) {
             author = users.get(m.fromId.userId.toString()) ?? "";
           } else if (!m.fromId) {
-            // Anonymous admin posting as channel
             author = channelName;
           }
+
+          const replyToMsgId = m.replyTo && "replyToMsgId" in m.replyTo
+            ? m.replyTo.replyToMsgId : undefined;
+
+          let replyTo: { msgId: number; text: string; author: string } | undefined;
+          if (replyToMsgId) {
+            const inBatch = batchMap.get(replyToMsgId);
+            const inRef = refMap.get(replyToMsgId);
+            if (inBatch) {
+              let batchAuthor = "";
+              if (inBatch.fromId && "userId" in inBatch.fromId) {
+                batchAuthor = users.get(inBatch.fromId.userId.toString()) ?? "";
+              } else if (!inBatch.fromId) {
+                batchAuthor = channelName;
+              }
+              replyTo = { msgId: replyToMsgId, text: inBatch.message ?? "", author: batchAuthor };
+            } else if (inRef) {
+              replyTo = { msgId: replyToMsgId, ...inRef };
+            }
+          }
+
           return {
             id: m.id,
             text: m.message ?? "",
             author,
             isChannel: !m.fromId,
+            replyTo,
             timestamp: m.date ? new Date(m.date * 1000).toISOString() : null,
           };
         }),
