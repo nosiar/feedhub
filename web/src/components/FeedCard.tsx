@@ -364,6 +364,19 @@ function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded
             {r.isChannel ? `📢 ${r.author}` : (r.author || "익명")}
           </span>
           <span style={{ color: "#3c4043", whiteSpace: "pre-wrap" }}>{r.text}</span>
+          {r.photoUrl && (
+            <div style={{ marginTop: 4 }}>
+              <img
+                src={r.photoUrl}
+                alt=""
+                style={{ maxWidth: 300, maxHeight: 300, borderRadius: 6, display: "block", cursor: "pointer" }}
+                onClick={(e: MouseEvent) => {
+                  e.stopPropagation();
+                  window.open(r.photoUrl, "_blank");
+                }}
+              />
+            </div>
+          )}
         </div>
       ))}
       {loading && <div style={{ fontSize: 12, color: "#999" }}>불러오는 중...</div>}

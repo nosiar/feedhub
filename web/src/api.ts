@@ -151,6 +151,7 @@ export interface ReplyItem {
   author: string;
   isChannel?: boolean;
   replyTo?: { msgId: number; text: string; author: string };
+  photoUrl?: string;
   timestamp: string | null;
 }
 

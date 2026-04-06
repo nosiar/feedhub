@@ -182,11 +182,13 @@ export function telegramRoutes(app: FastifyInstance): void {
         }
       }
 
-      // Channel name for anonymous admin replies (fromId is null)
+      // Channel name and discussion group ID for anonymous admin replies
       let channelName = "";
-      if ("chats" in result && Array.isArray(result.chats)) {
+      let discussionChatId = chatId;
+      if ("chats" in result && Array.isArray(result.chats) && result.chats[0]) {
         const ch = result.chats[0];
-        if (ch && "title" in ch) channelName = (ch as Api.Channel).title ?? "";
+        if ("title" in ch) channelName = (ch as Api.Channel).title ?? "";
+        discussionChatId = `-100${ch.id.toString()}`;
       }
 
       const messages = ("messages" in result && Array.isArray(result.messages))
@@ -211,10 +213,8 @@ export function telegramRoutes(app: FastifyInstance): void {
       // Batch-fetch missing referenced messages from the discussion group
       const refMap = new Map<number, { text: string; author: string }>();
       if (missingIds.size > 0) {
-        const discussionChatId = ("chats" in result && Array.isArray(result.chats) && result.chats[0])
-          ? result.chats[0].id.toString() : chatId;
         try {
-          const refMsgs = await client.getMessages(`-100${discussionChatId}`, {
+          const refMsgs = await client.getMessages(discussionChatId, {
             ids: [...missingIds],
           });
           for (const rm of refMsgs) {
@@ -266,12 +266,15 @@ export function telegramRoutes(app: FastifyInstance): void {
             }
           }
 
+          const hasPhoto = m.media instanceof Api.MessageMediaPhoto;
+
           return {
             id: m.id,
             text: m.message ?? "",
             author,
             isChannel: !m.fromId,
             replyTo,
+            ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${discussionChatId}/${m.id}` } : {}),
             timestamp: m.date ? new Date(m.date * 1000).toISOString() : null,
           };
         }),
