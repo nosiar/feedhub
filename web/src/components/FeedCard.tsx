@@ -328,9 +328,14 @@ function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded
         💬 댓글
       </div>
       {replies.map((r) => (
-        <div key={r.id} style={{ marginBottom: 6, fontSize: 13 }}>
-          <span style={{ fontWeight: 600, color: "#1a73e8", marginRight: 6 }}>{r.author || "익명"}</span>
-          <span style={{ color: "#3c4043" }}>{r.text}</span>
+        <div key={r.id} style={{
+          marginBottom: 6, fontSize: 13,
+          ...(r.isChannel ? { background: "#f0f6ff", padding: "6px 8px", borderRadius: 6, borderLeft: "3px solid #4285F4" } : {}),
+        }}>
+          <span style={{ fontWeight: 600, color: r.isChannel ? "#4285F4" : "#1a73e8", marginRight: 6 }}>
+            {r.isChannel ? `📢 ${r.author}` : (r.author || "익명")}
+          </span>
+          <span style={{ color: "#3c4043", whiteSpace: "pre-wrap" }}>{r.text}</span>
         </div>
       ))}
       {loading && <div style={{ fontSize: 12, color: "#999" }}>불러오는 중...</div>}

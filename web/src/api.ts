@@ -149,6 +149,7 @@ export interface ReplyItem {
   id: number;
   text: string;
   author: string;
+  isChannel?: boolean;
   timestamp: string | null;
 }
 

@@ -182,18 +182,33 @@ export function telegramRoutes(app: FastifyInstance): void {
         }
       }
 
+      // Channel name for anonymous admin replies (fromId is null)
+      let channelName = "";
+      if ("chats" in result && Array.isArray(result.chats)) {
+        const ch = result.chats[0];
+        if (ch && "title" in ch) channelName = (ch as Api.Channel).title ?? "";
+      }
+
       const messages = ("messages" in result && Array.isArray(result.messages))
         ? result.messages as Api.Message[] : [];
 
       return {
-        replies: messages.map((m) => ({
-          id: m.id,
-          text: m.message ?? "",
-          author: users.get(
-            (m.fromId && "userId" in m.fromId) ? m.fromId.userId.toString() : ""
-          ) ?? "",
-          timestamp: m.date ? new Date(m.date * 1000).toISOString() : null,
-        })),
+        replies: messages.map((m) => {
+          let author = "";
+          if (m.fromId && "userId" in m.fromId) {
+            author = users.get(m.fromId.userId.toString()) ?? "";
+          } else if (!m.fromId) {
+            // Anonymous admin posting as channel
+            author = channelName;
+          }
+          return {
+            id: m.id,
+            text: m.message ?? "",
+            author,
+            isChannel: !m.fromId,
+            timestamp: m.date ? new Date(m.date * 1000).toISOString() : null,
+          };
+        }),
         hasMore: messages.length === limit,
       };
     }
