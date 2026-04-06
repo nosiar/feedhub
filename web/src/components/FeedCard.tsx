@@ -291,6 +291,26 @@ function PollCard({ pollUrl, poll, expanded }: {
   );
 }
 
+function ReplyQuote({ replyTo }: { replyTo: { msgId: number; text: string; author: string } }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      onClick={(e: MouseEvent) => { e.stopPropagation(); setExpanded((v) => !v); }}
+      style={{
+        borderLeft: "2px solid #dadce0", paddingLeft: 8, marginBottom: 4,
+        fontSize: 12, color: "#5f6368", cursor: "pointer",
+        ...(!expanded ? {
+          overflow: "hidden", textOverflow: "ellipsis",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        } : { whiteSpace: "pre-wrap" }),
+      }}
+    >
+      <span style={{ fontWeight: 600, marginRight: 4 }}>{replyTo.author || "익명"}</span>
+      {replyTo.text}
+    </div>
+  );
+}
+
 function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded?: boolean }) {
   const [replies, setReplies] = useState<ReplyItem[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -339,17 +359,7 @@ function RepliesSection({ repliesUrl, expanded }: { repliesUrl: string; expanded
           marginBottom: 6, fontSize: 13,
           ...(r.isChannel ? { background: "#f0f6ff", padding: "6px 8px", borderRadius: 6, borderLeft: "3px solid #4285F4" } : {}),
         }}>
-          {r.replyTo && (
-            <div style={{
-              borderLeft: "2px solid #dadce0", paddingLeft: 8, marginBottom: 4,
-              fontSize: 12, color: "#5f6368",
-              overflow: "hidden", textOverflow: "ellipsis",
-              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-            }}>
-              <span style={{ fontWeight: 600, marginRight: 4 }}>{r.replyTo.author || "익명"}</span>
-              {r.replyTo.text}
-            </div>
-          )}
+          {r.replyTo && <ReplyQuote replyTo={r.replyTo} />}
           <span style={{ fontWeight: 600, color: r.isChannel ? "#4285F4" : "#1a73e8", marginRight: 6 }}>
             {r.isChannel ? `📢 ${r.author}` : (r.author || "익명")}
           </span>
