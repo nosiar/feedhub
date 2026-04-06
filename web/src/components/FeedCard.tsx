@@ -593,19 +593,31 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
             style={{ outline: "none" }}
           />
         ) : null
-      ) : isChat && expanded ? (
-        <div style={{ fontSize: 14, color: "#3c4043", whiteSpace: "pre-wrap" }}>
-          <MessageBody item={item} />
-        </div>
+      ) : isChat ? (
+        <>
+          <div style={{ fontSize: 14, color: "#3c4043", whiteSpace: "pre-wrap", display: expanded ? undefined : "none" }}>
+            <MessageBody item={item} />
+          </div>
+          {!expanded && (
+            <div style={{ fontSize: 14, color: "#3c4043" }}>
+              <div style={{
+                overflow: "hidden", textOverflow: "ellipsis",
+                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+              }}>
+                {item.source === "telegram" ? <MarkdownText text={item.body ?? ""} /> : <Linkify text={item.body ?? ""} />}
+              </div>
+              <CompactMedia item={item} />
+            </div>
+          )}
+        </>
       ) : (
         <div style={{ fontSize: 14, color: "#3c4043" }}>
           <div style={{
             overflow: "hidden", textOverflow: "ellipsis",
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
           }}>
-            {isChat ? (item.source === "telegram" ? <MarkdownText text={item.body ?? ""} /> : <Linkify text={item.body ?? ""} />) : item.body}
+            {item.body}
           </div>
-          {isChat && <CompactMedia item={item} />}
         </div>
       )}
     </div>
