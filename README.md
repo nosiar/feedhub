@@ -2,7 +2,7 @@
 
 Unified feed reader that aggregates Gmail, KakaoTalk, Telegram, RSS, and Slack into a single web UI.
 
-![feedhub](web/public/favicon.svg)
+<img src="web/public/favicon.svg" alt="feedhub" width="64">
 
 ## Features
 
@@ -12,10 +12,13 @@ Unified feed reader that aggregates Gmail, KakaoTalk, Telegram, RSS, and Slack i
 - **Expand/collapse** — click Gmail or chat messages to read inline
 - **Gmail integration** — read full email body, trash from feed
 - **KakaoTalk** — chat messages with photos, link previews, sender names
-- **Telegram** — channel/group messages with link previews, OG fallback
+- **Telegram** — channel/group messages with link previews, OG fallback, polls, video, reply threads
 - **RSS** — subscribe to any RSS/Atom feed
 - **Link previews** — OG meta cards for shared URLs (with shimmer loading)
 - **Image lightbox** — click photos to view full size with arrow key navigation
+- **Video playback** — inline video player for Telegram media
+- **Polls** — Telegram poll results with voter counts and percentages
+- **Reply threads** — expandable comment/reply threads for Telegram messages
 - **Dismiss** — hide any item from feed (soft delete, survives re-sync)
 - **Settings page** — manage RSS feeds, KakaoTalk chats, Telegram channels from the web UI
 - **Auto-refresh** — frontend polls every 60s, backend syncs every 5min
@@ -52,7 +55,7 @@ cd web && npm install && cd ..
 
 ### Configure
 
-Copy `.env.example` or create `.env`:
+Create a `.env` file:
 
 ```env
 MONGODB_URI=mongodb+srv://...
@@ -148,6 +151,10 @@ Open http://localhost:3000
 | GET | `/api/telegram/chats` | List Telegram dialogs |
 | GET | `/api/og?url=` | Fetch OG meta for a URL |
 | GET | `/api/settings/rss-title?url=` | Fetch RSS feed title |
+| GET | `/api/telegram/photo/:chatId/:msgId` | Fetch Telegram photo |
+| GET | `/api/telegram/video/:chatId/:msgId` | Fetch Telegram video |
+| GET | `/api/telegram/poll/:chatId/:msgId` | Fetch Telegram poll results |
+| GET | `/api/telegram/replies/:chatId/:msgId` | Fetch Telegram reply thread |
 
 ## Project Structure
 
@@ -160,7 +167,8 @@ feedhub/
 │   ├── db/                # MongoDB layer
 │   │   ├── client.ts      # Connection singleton
 │   │   ├── feed-repo.ts   # Feed CRUD with soft delete
-│   │   └── settings-repo.ts
+│   │   ├── settings-repo.ts
+│   │   └── indexes.ts     # MongoDB index definitions
 │   ├── server/
 │   │   ├── app.ts         # Fastify app factory
 │   │   └── routes/        # API route handlers
