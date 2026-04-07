@@ -224,6 +224,10 @@ function getVideoUrl(item: FeedItem): string | null {
   return (item.metadata?.videoUrl as string) ?? null;
 }
 
+function getVideoPosterUrl(item: FeedItem): string | null {
+  return (item.metadata?.videoPosterUrl as string) ?? null;
+}
+
 function getReplies(item: FeedItem): { replyCount: number; repliesUrl: string } | null {
   const count = item.metadata?.replyCount as number | undefined;
   const url = item.metadata?.repliesUrl as string | undefined;
@@ -428,6 +432,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const images = getImageUrls(item);
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
+  const videoPosterUrl = getVideoPosterUrl(item);
   const poll = getPoll(item);
   const repliesInfo = getReplies(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
@@ -475,6 +480,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
             src={videoUrl}
             controls
             preload="metadata"
+            poster={videoPosterUrl ?? undefined}
             style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }}
           />
         </div>

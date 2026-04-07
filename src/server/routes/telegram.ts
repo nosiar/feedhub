@@ -4,8 +4,9 @@ import { StringSession } from "telegram/sessions/index.js";
 import { Api } from "telegram/tl/index.js";
 import { config } from "../../config.js";
 
-// In-memory photo cache (cleared on server restart)
+// In-memory media cache (cleared on server restart)
 const photoCache = new Map<string, { data: Buffer; mime: string }>();
+const videoCache = new Map<string, { data: Buffer; mime: string }>();
 
 let sharedClient: TelegramClient | null = null;
 
@@ -91,6 +92,76 @@ export function telegramRoutes(app: FastifyInstance): void {
       }
 
       const { chatId, msgId } = req.params;
+      const cacheKey = `${chatId}_${msgId}`;
+
+      let cached = videoCache.get(cacheKey);
+      if (!cached) {
+        const client = await getClient();
+        const msgs = await client.getMessages(chatId, { ids: [parseInt(msgId, 10)] });
+        const msg = msgs[0];
+
+        if (
+          !msg?.media
+          || !(msg.media instanceof Api.MessageMediaDocument)
+          || !(msg.media.document instanceof Api.Document)
+          || !msg.media.document.mimeType?.startsWith("video/")
+        ) {
+          return reply.status(404).send({ error: "Video not found" });
+        }
+
+        const buffer = (await client.downloadMedia(msg.media, {})) as Buffer;
+        if (!buffer) {
+          return reply.status(404).send({ error: "Download failed" });
+        }
+        cached = { data: buffer, mime: msg.media.document.mimeType };
+        videoCache.set(cacheKey, cached);
+      }
+
+      const { data, mime } = cached;
+      const total = data.length;
+      const range = req.headers.range;
+
+      if (range) {
+        const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(startStr, 10);
+        const end = endStr ? parseInt(endStr, 10) : Math.min(start + 1024 * 1024 - 1, total - 1);
+        return reply
+          .status(206)
+          .header("Content-Type", mime)
+          .header("Content-Range", `bytes ${start}-${end}/${total}`)
+          .header("Content-Length", end - start + 1)
+          .header("Accept-Ranges", "bytes")
+          .header("Cache-Control", "public, max-age=86400")
+          .send(data.subarray(start, end + 1));
+      }
+
+      return reply
+        .header("Content-Type", mime)
+        .header("Content-Length", total)
+        .header("Accept-Ranges", "bytes")
+        .header("Cache-Control", "public, max-age=86400")
+        .send(data);
+    }
+  );
+
+  app.get<{ Params: { chatId: string; msgId: string } }>(
+    "/api/telegram/video-thumb/:chatId/:msgId",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
+      }
+
+      const { chatId, msgId } = req.params;
+      const cacheKey = `thumb_${chatId}_${msgId}`;
+
+      const cached = photoCache.get(cacheKey);
+      if (cached) {
+        return reply
+          .header("Content-Type", cached.mime)
+          .header("Cache-Control", "public, max-age=86400")
+          .send(cached.data);
+      }
+
       const client = await getClient();
       const msgs = await client.getMessages(chatId, { ids: [parseInt(msgId, 10)] });
       const msg = msgs[0];
@@ -99,16 +170,19 @@ export function telegramRoutes(app: FastifyInstance): void {
         !msg?.media
         || !(msg.media instanceof Api.MessageMediaDocument)
         || !(msg.media.document instanceof Api.Document)
-        || !msg.media.document.mimeType?.startsWith("video/")
+        || !msg.media.document.thumbs?.length
       ) {
-        return reply.status(404).send({ error: "Video not found" });
+        return reply.status(404).send({ error: "Thumbnail not found" });
       }
 
-      const mime = msg.media.document.mimeType;
-      const buffer = (await client.downloadMedia(msg.media, {})) as Buffer;
+      const thumb = msg.media.document.thumbs.at(-1)!;
+      const buffer = (await client.downloadMedia(msg.media, { thumb })) as Buffer;
       if (!buffer) {
         return reply.status(404).send({ error: "Download failed" });
       }
+
+      const mime = "image/jpeg";
+      photoCache.set(cacheKey, { data: buffer, mime });
 
       return reply
         .header("Content-Type", mime)

@@ -145,7 +145,7 @@ export class TelegramConnector implements Connector {
               messageId: msgId,
               imageUrls,
               ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
-              ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}` } : {}),
+              ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}`, videoPosterUrl: `/api/telegram/video-thumb/${chat.id}/${msgId}` } : {}),
               ...(poll ? { poll, pollUrl: `/api/telegram/poll/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
               ...(msg.replies?.comments ? {
