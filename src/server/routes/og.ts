@@ -40,9 +40,13 @@ async function fetchOgMeta(url: string): Promise<{
 
     const get = (property: string): string => {
       const match = html.match(
-        new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content=["']([^"']*)["']`, "i")
+        new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content="([^"]*)"`, "i")
       ) ?? html.match(
-        new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${property}["']`, "i")
+        new RegExp(`<meta[^>]+(?:property|name)=["']${property}["'][^>]+content='([^']*)'`, "i")
+      ) ?? html.match(
+        new RegExp(`<meta[^>]+content="([^"]*)"[^>]+(?:property|name)=["']${property}["']`, "i")
+      ) ?? html.match(
+        new RegExp(`<meta[^>]+content='([^']*)'[^>]+(?:property|name)=["']${property}["']`, "i")
       );
       return decodeEntities(match?.[1] ?? "");
     };
