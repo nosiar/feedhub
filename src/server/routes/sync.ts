@@ -13,13 +13,13 @@ export async function runSync(connector: Connector): Promise<{ count: number }> 
   const cursor = cursorDoc?.cursor ?? null;
 
   const { items, newCursor } = await connector.sync(cursor);
-  await upsertFeedItems(items);
+  const { upserted, modified } = await upsertFeedItems(items);
   await cursors.updateOne(
     { source: connector.name },
     { $set: { cursor: newCursor, lastSyncedAt: new Date() } },
     { upsert: true }
   );
-  return { count: items.length };
+  return { count: upserted + modified };
 }
 
 export function syncRoutes(

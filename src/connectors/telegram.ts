@@ -73,13 +73,26 @@ export class TelegramConnector implements Connector {
       }
     }
 
+    const RECENT_REFRESH_LIMIT = 100;
+
     const results = await Promise.allSettled(
       targets.map(async (chat) => {
         const chatCursor = cursors.get(chat.id) ?? 0;
 
-        const msgs = await client.getMessages(chat.id, {
-          limit: chatCursor ? 1000 : 50,
-          minId: chatCursor || undefined,
+        const newMsgs = chatCursor
+          ? await client.getMessages(chat.id, { limit: 1000, minId: chatCursor })
+          : [];
+
+        // Always re-fetch recent messages to pick up edits
+        const recentMsgs = await client.getMessages(chat.id, {
+          limit: chatCursor ? RECENT_REFRESH_LIMIT : 50,
+        });
+
+        const seen = new Set<number>();
+        const msgs = [...newMsgs, ...recentMsgs].filter((m) => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
         });
 
         let maxId = chatCursor;

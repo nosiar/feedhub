@@ -3,8 +3,10 @@ import type { FeedItem, SourceType } from "../connectors/types.js";
 
 const COLLECTION = "feed_items";
 
-export async function upsertFeedItems(items: FeedItem[]): Promise<void> {
-  if (items.length === 0) return;
+export async function upsertFeedItems(
+  items: FeedItem[]
+): Promise<{ upserted: number; modified: number }> {
+  if (items.length === 0) return { upserted: 0, modified: 0 };
   const db = await getDb();
   const col = db.collection(COLLECTION);
   const ops = items.map((item) => ({
@@ -17,7 +19,11 @@ export async function upsertFeedItems(items: FeedItem[]): Promise<void> {
       upsert: true,
     },
   }));
-  await col.bulkWrite(ops);
+  const result = await col.bulkWrite(ops);
+  return {
+    upserted: result.upsertedCount,
+    modified: result.modifiedCount,
+  };
 }
 
 export async function dismissFeedItem(source: SourceType, id: string): Promise<void> {
