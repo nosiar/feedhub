@@ -1,5 +1,12 @@
 import type { FastifyInstance } from "fastify";
 
+/** Naver blog frameset pages lack OG tags; rewrite to PostView which includes them. */
+function rewriteNaverBlog(url: string): string {
+  const m = url.match(/^https?:\/\/blog\.naver\.com\/([^/?#]+)\/(\d+)/);
+  if (!m) return url;
+  return `https://blog.naver.com/PostView.nhn?blogId=${m[1]}&logNo=${m[2]}&widgetTypeCall=true`;
+}
+
 async function fetchOgMeta(url: string): Promise<{
   title: string;
   description: string;
@@ -7,7 +14,8 @@ async function fetchOgMeta(url: string): Promise<{
   url: string;
 } | null> {
   try {
-    const res = await fetch(url, {
+    const fetchUrl = rewriteNaverBlog(url);
+    const res = await fetch(fetchUrl, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; feedhub/1.0)" },
       redirect: "follow",
       signal: AbortSignal.timeout(5000),

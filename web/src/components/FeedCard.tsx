@@ -182,7 +182,7 @@ function LinkPreviewCard({
     >
       <div style={{ border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden", background: "#fafafa", maxWidth: 320 }}>
         {preview.imageUrl ? (
-          <img src={preview.imageUrl} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }} />
+          <img src={preview.imageUrl} alt="" referrerPolicy="no-referrer" style={{ width: "100%", maxHeight: 200, objectFit: "contain", display: "block", background: "#f0f0f0" }} />
         ) : imageLoading ? (
           <ImageShimmer />
         ) : null}
