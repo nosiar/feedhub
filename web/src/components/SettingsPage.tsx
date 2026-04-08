@@ -4,6 +4,7 @@ import { getSettings, saveSettings, type SettingsResponse, type RssFeed, type Ka
 import { RssFeedManager } from "./RssFeedManager.js";
 import { KakaoChatManager } from "./KakaoChatManager.js";
 import { TelegramChatManager } from "./TelegramChatManager.js";
+import { YouTubeChannelManager } from "./YouTubeChannelManager.js";
 import { SourceStatus } from "./SourceStatus.js";
 
 export function SettingsPage({ onBack }: { onBack: () => void }) {
@@ -14,13 +15,14 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
     getSettings().then(setSettings);
   }, []);
 
-  const save = async (patch: Partial<Pick<SettingsResponse, "rssFeeds" | "kakaoChats" | "telegramChats">>) => {
+  const save = async (patch: Partial<Pick<SettingsResponse, "rssFeeds" | "kakaoChats" | "telegramChats" | "youtubeChannels">>) => {
     if (!settings) return;
     setSaving(true);
     const updated = {
       rssFeeds: patch.rssFeeds ?? settings.rssFeeds,
       kakaoChats: patch.kakaoChats ?? settings.kakaoChats,
       telegramChats: patch.telegramChats ?? settings.telegramChats,
+      youtubeChannels: patch.youtubeChannels ?? settings.youtubeChannels,
     };
     try {
       await saveSettings(updated);
@@ -64,6 +66,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       <TelegramChatManager
         chats={settings.telegramChats}
         onChange={(chats) => save({ telegramChats: chats })}
+      />
+      <YouTubeChannelManager
+        channels={settings.youtubeChannels}
+        onChange={(channels) => save({ youtubeChannels: channels })}
       />
       <SourceStatus name="Gmail" icon="📧" connected={settings.gmail.connected} />
       <SourceStatus name="Slack" icon="💬" connected={settings.slack.connected} />
