@@ -85,6 +85,7 @@ const SOURCE_ICONS: Record<string, string> = {
   slack: "\u{1F4AC}",
   rss: "\u{1F4F0}",
   telegram: "\u{2708}\u{FE0F}",
+  youtube: "\u{25B6}\u{FE0F}",
 };
 
 const URL_RE = /(https?:\/\/[^\s]+)/g;
@@ -252,6 +253,21 @@ function getPoll(item: FeedItem): { question: string; answers: string[]; pollUrl
   const pollUrl = item.metadata?.pollUrl as string | undefined;
   if (poll && pollUrl) return { ...poll, pollUrl };
   return null;
+}
+
+function getYouTubeMeta(item: FeedItem): { videoId: string; thumbnail: string; views?: number } | null {
+  if (item.source !== "youtube") return null;
+  const videoId = item.metadata?.videoId as string | undefined;
+  const thumbnail = item.metadata?.thumbnail as string | undefined;
+  if (!videoId || !thumbnail) return null;
+  const views = item.metadata?.views as number | undefined;
+  return { videoId, thumbnail, ...(views !== undefined ? { views } : {}) };
+}
+
+function formatViews(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}만`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}천`;
+  return String(n);
 }
 
 function PollCard({ pollUrl, poll, expanded }: {
@@ -705,16 +721,52 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
             </div>
           )}
         </>
-      ) : (
-        <div style={{ fontSize: 14, color: "#3c4043" }}>
-          <div style={{
-            overflow: "hidden", textOverflow: "ellipsis",
-            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-          }}>
-            {item.body}
+      ) : (() => {
+        const yt = getYouTubeMeta(item);
+        if (yt) {
+          return (
+            <div style={{ fontSize: 14, color: "#3c4043" }}>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e: MouseEvent) => e.stopPropagation()}
+                style={{ textDecoration: "none", color: "inherit", display: "block" }}
+              >
+                <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", background: "#000", marginBottom: 8 }}>
+                  <img
+                    src={yt.thumbnail}
+                    alt=""
+                    style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }}
+                  />
+                </div>
+              </a>
+              <div style={{
+                overflow: "hidden", textOverflow: "ellipsis",
+                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                fontSize: 13, color: "#5f6368",
+              }}>
+                {item.body}
+              </div>
+              {yt.views !== undefined && (
+                <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
+                  조회수 {formatViews(yt.views)}회
+                </div>
+              )}
+            </div>
+          );
+        }
+        return (
+          <div style={{ fontSize: 14, color: "#3c4043" }}>
+            <div style={{
+              overflow: "hidden", textOverflow: "ellipsis",
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+            }}>
+              {item.body}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
