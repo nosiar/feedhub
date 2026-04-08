@@ -51,6 +51,7 @@ export class YouTubeConnector implements Connector {
             entry.isoDate ?? entry.pubDate ?? Date.now()
           );
           if (cursorDate && timestamp <= cursorDate) continue;
+          if (entry.link?.includes("/shorts/")) continue;
 
           const videoId = entry.id?.replace("yt:video:", "") ?? "";
           const mg = entry.mediaGroup;
