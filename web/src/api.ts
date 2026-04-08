@@ -2,7 +2,7 @@ const BASE = "/api";
 
 export interface FeedItem {
   id: string;
-  source: "gmail" | "kakaotalk" | "slack" | "rss" | "telegram";
+  source: "gmail" | "kakaotalk" | "slack" | "rss" | "telegram" | "youtube";
   title: string;
   body: string;
   author: string;

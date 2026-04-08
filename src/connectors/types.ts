@@ -1,4 +1,4 @@
-export type SourceType = "gmail" | "kakaotalk" | "slack" | "rss" | "telegram";
+export type SourceType = "gmail" | "kakaotalk" | "slack" | "rss" | "telegram" | "youtube";
 
 export interface FeedItem {
   id: string;
