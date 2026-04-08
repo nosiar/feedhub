@@ -88,10 +88,16 @@ export interface TelegramChat {
   name: string;
 }
 
+export interface YouTubeChannel {
+  channelId: string;
+  name: string;
+}
+
 export interface SettingsResponse {
   rssFeeds: RssFeed[];
   kakaoChats: KakaoChat[];
   telegramChats: TelegramChat[];
+  youtubeChannels: YouTubeChannel[];
   gmail: { connected: boolean };
   slack: { connected: boolean };
   telegram: { connected: boolean };
@@ -106,6 +112,7 @@ export async function saveSettings(data: {
   rssFeeds: RssFeed[];
   kakaoChats: KakaoChat[];
   telegramChats: TelegramChat[];
+  youtubeChannels: YouTubeChannel[];
 }): Promise<void> {
   await fetch(`${BASE}/settings`, {
     method: "PUT",
@@ -178,4 +185,14 @@ export async function fetchRssTitle(url: string): Promise<string> {
   } catch {
     return url;
   }
+}
+
+export async function resolveYouTubeChannel(
+  input: string
+): Promise<YouTubeChannel> {
+  const res = await fetch(
+    `${BASE}/settings/youtube-channel?input=${encodeURIComponent(input)}`
+  );
+  if (!res.ok) throw new Error("Invalid channel");
+  return res.json();
 }
