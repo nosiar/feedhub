@@ -235,6 +235,18 @@ function getReplies(item: FeedItem): { replyCount: number; repliesUrl: string } 
   return null;
 }
 
+function getFileAttachment(item: FeedItem): { fileName: string; fileSize: number; mimeType: string; fileUrl: string } | null {
+  const f = item.metadata?.fileAttachment;
+  if (f && typeof f === "object" && "fileUrl" in f) return f as { fileName: string; fileSize: number; mimeType: string; fileUrl: string };
+  return null;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function getPoll(item: FeedItem): { question: string; answers: string[]; pollUrl: string } | null {
   const poll = item.metadata?.poll as { question: string; answers: string[] } | undefined;
   const pollUrl = item.metadata?.pollUrl as string | undefined;
@@ -434,6 +446,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const videoUrl = getVideoUrl(item);
   const videoPosterUrl = getVideoPosterUrl(item);
   const poll = getPoll(item);
+  const fileAttachment = getFileAttachment(item);
   const repliesInfo = getReplies(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
@@ -485,6 +498,30 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
           />
         </div>
       )}
+      {fileAttachment && (
+        <a
+          href={fileAttachment.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e: MouseEvent) => e.stopPropagation()}
+          style={{
+            display: "flex", alignItems: "center", gap: 8, marginTop: 8, padding: "10px 12px",
+            background: "#f8f9fa", borderRadius: 8, border: "1px solid #e0e0e0",
+            textDecoration: "none", color: "inherit", maxWidth: 360,
+          }}
+        >
+          <span style={{ fontSize: 24 }}>📎</span>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#202124", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {fileAttachment.fileName}
+            </div>
+            <div style={{ fontSize: 11, color: "#5f6368" }}>
+              {formatFileSize(fileAttachment.fileSize)}
+            </div>
+          </div>
+          <span style={{ fontSize: 18, color: "#1a73e8" }}>⬇</span>
+        </a>
+      )}
       {poll && <PollCard pollUrl={poll.pollUrl} poll={poll} expanded={!compact} />}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
       {repliesInfo && repliesInfo.replyCount > 0 && (
@@ -510,6 +547,7 @@ function CompactMedia({ item }: { item: FeedItem }) {
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
   const poll = getPoll(item);
+  const fileAttachment = getFileAttachment(item);
   const repliesInfo = getReplies(item);
   const unsupported = item.metadata?.unsupportedMedia;
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
@@ -519,6 +557,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
       {videoUrl && (
         <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", background: "#e8f0fe", borderRadius: 4, fontSize: 11, color: "#1a73e8" }}>
           🎬 영상
+        </span>
+      )}
+      {fileAttachment && (
+        <span style={{ display: "inline-block", marginTop: 4, marginLeft: videoUrl ? 4 : 0, padding: "2px 8px", background: "#e8f5e9", borderRadius: 4, fontSize: 11, color: "#2e7d32" }}>
+          📎 {fileAttachment.fileName}
         </span>
       )}
       {poll && (

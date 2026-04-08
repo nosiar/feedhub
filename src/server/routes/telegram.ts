@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import bigInt from "big-integer";
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { Api } from "telegram/tl/index.js";
@@ -91,13 +92,13 @@ export function telegramRoutes(app: FastifyInstance): void {
         return reply.status(400).send({ error: "Telegram not connected" });
       }
 
-      const { chatId, msgId } = req.params;
-      const cacheKey = `${chatId}_${msgId}`;
+      const { chatId, msgId: msgIdStr } = req.params;
+      const cacheKey = `${chatId}_${msgIdStr}`;
 
       let cached = videoCache.get(cacheKey);
       if (!cached) {
         const client = await getClient();
-        const msgs = await client.getMessages(chatId, { ids: [parseInt(msgId, 10)] });
+        const msgs = await client.getMessages(chatId, { ids: [parseInt(msgIdStr, 10)] });
         const msg = msgs[0];
 
         if (
@@ -109,11 +110,22 @@ export function telegramRoutes(app: FastifyInstance): void {
           return reply.status(404).send({ error: "Video not found" });
         }
 
-        const buffer = (await client.downloadMedia(msg.media, {})) as Buffer;
-        if (!buffer) {
-          return reply.status(404).send({ error: "Download failed" });
+        const doc = msg.media.document;
+        const chunks: Buffer[] = [];
+        for await (const chunk of client.iterDownload({
+          file: new Api.InputDocumentFileLocation({
+            id: doc.id,
+            accessHash: doc.accessHash,
+            fileReference: doc.fileReference,
+            thumbSize: "",
+          }),
+          requestSize: 512 * 1024,
+          fileSize: bigInt(Number(doc.size)),
+        })) {
+          chunks.push(chunk);
         }
-        cached = { data: buffer, mime: msg.media.document.mimeType };
+
+        cached = { data: Buffer.concat(chunks), mime: doc.mimeType };
         videoCache.set(cacheKey, cached);
       }
 
@@ -192,6 +204,58 @@ export function telegramRoutes(app: FastifyInstance): void {
   );
 
   app.get<{ Params: { chatId: string; msgId: string } }>(
+    "/api/telegram/file/:chatId/:msgId",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
+      }
+
+      const { chatId, msgId: msgIdStr } = req.params;
+      const client = await getClient();
+      const msgs = await client.getMessages(chatId, { ids: [parseInt(msgIdStr, 10)] });
+      const msg = msgs[0];
+
+      if (
+        !msg?.media
+        || !(msg.media instanceof Api.MessageMediaDocument)
+        || !(msg.media.document instanceof Api.Document)
+      ) {
+        return reply.status(404).send({ error: "File not found" });
+      }
+
+      const doc = msg.media.document;
+      const fileNameAttr = doc.attributes?.find(
+        (a): a is Api.DocumentAttributeFilename => a.className === "DocumentAttributeFilename"
+      );
+      const fileName = fileNameAttr?.fileName ?? "file";
+      const mime = doc.mimeType ?? "application/octet-stream";
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of client.iterDownload({
+        file: new Api.InputDocumentFileLocation({
+          id: doc.id,
+          accessHash: doc.accessHash,
+          fileReference: doc.fileReference,
+          thumbSize: "",
+        }),
+        requestSize: 512 * 1024,
+        fileSize: bigInt(Number(doc.size)),
+      })) {
+        chunks.push(chunk);
+      }
+
+      const data = Buffer.concat(chunks);
+
+      return reply
+        .header("Content-Type", mime)
+        .header("Content-Disposition", `attachment; filename="file"; filename*=UTF-8''${encodeURIComponent(fileName)}`)
+        .header("Content-Length", data.length)
+        .header("Cache-Control", "public, max-age=86400")
+        .send(data);
+    }
+  );
+
+  app.get<{ Params: { chatId: string; msgId: string } }>(
     "/api/telegram/poll/:chatId/:msgId",
     async (req, reply) => {
       if (!config.telegram.session) {
@@ -242,7 +306,7 @@ export function telegramRoutes(app: FastifyInstance): void {
           limit,
           maxId: 0,
           minId: 0,
-          hash: BigInt(0) as unknown as Api.long,
+          hash: bigInt(0) as unknown as Api.long,
         })
       );
 

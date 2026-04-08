@@ -112,6 +112,26 @@ export class TelegramConnector implements Connector {
             && msg.media.document instanceof Api.Document
             && (msg.media.document.mimeType?.startsWith("video/") ?? false);
 
+          let fileAttachment: { fileName: string; fileSize: number; mimeType: string; fileUrl: string } | undefined;
+          if (
+            msg.media instanceof Api.MessageMediaDocument
+            && msg.media.document instanceof Api.Document
+            && !hasVideo
+          ) {
+            const doc = msg.media.document;
+            const fileNameAttr = doc.attributes?.find(
+              (a): a is Api.DocumentAttributeFilename => a instanceof Api.DocumentAttributeFilename
+            );
+            if (fileNameAttr) {
+              fileAttachment = {
+                fileName: fileNameAttr.fileName,
+                fileSize: Number(doc.size),
+                mimeType: doc.mimeType ?? "application/octet-stream",
+                fileUrl: `/api/telegram/file/${chat.id}/${msgId}`,
+              };
+            }
+          }
+
           let poll: { question: string; answers: string[] } | undefined;
           if (msg.media instanceof Api.MessageMediaPoll) {
             poll = {
@@ -146,6 +166,7 @@ export class TelegramConnector implements Connector {
               imageUrls,
               ...(hasPhoto ? { photoUrl: `/api/telegram/photo/${chat.id}/${msgId}` } : {}),
               ...(hasVideo ? { videoUrl: `/api/telegram/video/${chat.id}/${msgId}`, videoPosterUrl: `/api/telegram/video-thumb/${chat.id}/${msgId}` } : {}),
+              ...(fileAttachment ? { fileAttachment } : {}),
               ...(poll ? { poll, pollUrl: `/api/telegram/poll/${chat.id}/${msgId}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
               ...(msg.replies?.comments ? {
