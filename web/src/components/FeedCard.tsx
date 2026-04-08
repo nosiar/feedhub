@@ -725,35 +725,35 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
         const yt = getYouTubeMeta(item);
         if (yt) {
           return (
-            <div style={{ fontSize: 14, color: "#3c4043" }}>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e: MouseEvent) => e.stopPropagation()}
-                style={{ textDecoration: "none", color: "inherit", display: "block" }}
-              >
-                <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", background: "#000", marginBottom: 8 }}>
-                  <img
-                    src={yt.thumbnail}
-                    alt=""
-                    style={{ width: "100%", display: "block", aspectRatio: "16/9", objectFit: "cover" }}
-                  />
-                </div>
-              </a>
-              <div style={{
-                overflow: "hidden", textOverflow: "ellipsis",
-                display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                fontSize: 13, color: "#5f6368",
-              }}>
-                {item.body}
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e: MouseEvent) => e.stopPropagation()}
+              style={{ textDecoration: "none", color: "inherit", display: "flex", gap: 12, alignItems: "flex-start" }}
+            >
+              <div style={{ flexShrink: 0, width: 168, borderRadius: 8, overflow: "hidden", background: "#000" }}>
+                <img
+                  src={yt.thumbnail}
+                  alt=""
+                  style={{ width: 168, height: 94, display: "block", objectFit: "cover" }}
+                />
               </div>
-              {yt.views !== undefined && (
-                <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
-                  조회수 {formatViews(yt.views)}회
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  overflow: "hidden", textOverflow: "ellipsis",
+                  display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+                  fontSize: 13, color: "#5f6368", lineHeight: 1.4,
+                }}>
+                  {item.body}
                 </div>
-              )}
-            </div>
+                {yt.views !== undefined && (
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
+                    조회수 {formatViews(yt.views)}회
+                  </div>
+                )}
+              </div>
+            </a>
           );
         }
         return (
