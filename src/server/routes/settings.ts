@@ -18,8 +18,8 @@ export function settingsRoutes(
   });
 
   app.put("/api/settings", async (req) => {
-    const { rssFeeds, kakaoChats, telegramChats } = req.body as Settings;
-    const settings = { rssFeeds, kakaoChats, telegramChats };
+    const { rssFeeds, kakaoChats, telegramChats, youtubeChannels } = req.body as Settings;
+    const settings = { rssFeeds, kakaoChats, telegramChats, youtubeChannels };
     await saveSettings(settings);
     onSettingsChanged(settings);
     return { ok: true };
@@ -35,6 +35,32 @@ export function settingsRoutes(
       return { title: feed.title ?? url };
     } catch {
       return { title: url };
+    }
+  });
+
+  app.get("/api/settings/youtube-channel", async (req, reply) => {
+    const { input } = req.query as { input?: string };
+    if (!input) return reply.status(400).send({ error: "input required" });
+
+    // Extract channel ID from URL format or treat as raw ID
+    let channelId = input.trim();
+    const channelUrlMatch = channelId.match(
+      /youtube\.com\/channel\/(UC[\w-]{22})/
+    );
+    if (channelUrlMatch) {
+      channelId = channelUrlMatch[1];
+    }
+
+    // Validate by fetching the RSS feed
+    try {
+      const Parser = (await import("rss-parser")).default;
+      const parser = new Parser();
+      const feed = await parser.parseURL(
+        `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`
+      );
+      return { channelId, name: feed.title ?? channelId };
+    } catch {
+      return reply.status(400).send({ error: "Invalid channel ID or URL" });
     }
   });
 }

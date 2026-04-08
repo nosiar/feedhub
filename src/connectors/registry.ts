@@ -6,6 +6,7 @@ import { GmailConnector } from "./gmail.js";
 import { SlackConnector } from "./slack.js";
 import { KakaotalkConnector } from "./kakaotalk.js";
 import { TelegramConnector } from "./telegram.js";
+import { YouTubeConnector } from "./youtube.js";
 
 export function buildConnectors(settings: Settings): Map<SourceType, Connector> {
   const connectors = new Map<SourceType, Connector>();
@@ -27,6 +28,9 @@ export function buildConnectors(settings: Settings): Map<SourceType, Connector> 
       ...config.telegram,
       chats: settings.telegramChats,
     }));
+  }
+  if (settings.youtubeChannels.length > 0) {
+    connectors.set("youtube", new YouTubeConnector(settings.youtubeChannels));
   }
 
   return connectors;

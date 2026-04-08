@@ -4,6 +4,7 @@ export interface Settings {
   rssFeeds: { url: string; title: string }[];
   kakaoChats: { id: string; name: string }[];
   telegramChats: { id: string; name: string }[];
+  youtubeChannels: { channelId: string; name: string }[];
 }
 
 const COLLECTION = "settings";
@@ -11,11 +12,12 @@ const COLLECTION = "settings";
 export async function getSettings(): Promise<Settings> {
   const db = await getDb();
   const doc = await db.collection(COLLECTION).findOne({ _id: "global" as any });
-  if (!doc) return { rssFeeds: [], kakaoChats: [], telegramChats: [] };
+  if (!doc) return { rssFeeds: [], kakaoChats: [], telegramChats: [], youtubeChannels: [] };
   return {
     rssFeeds: doc.rssFeeds ?? [],
     kakaoChats: doc.kakaoChats ?? [],
     telegramChats: doc.telegramChats ?? [],
+    youtubeChannels: doc.youtubeChannels ?? [],
   };
 }
 
@@ -36,5 +38,5 @@ export async function seedSettings(
   const existing = await db.collection(COLLECTION).findOne({ _id: "global" as any });
   if (existing) return;
   const rssFeeds = envRssFeeds.map((url) => ({ url, title: "" }));
-  await saveSettings({ rssFeeds, kakaoChats: envKakaoChats, telegramChats: [] });
+  await saveSettings({ rssFeeds, kakaoChats: envKakaoChats, telegramChats: [], youtubeChannels: [] });
 }
