@@ -21,8 +21,11 @@ export function dismissRoutes(
     if (source === "naver") {
       const naver = connectors.get("naver");
       if (naver instanceof NaverMailConnector) {
-        const uid = parseInt(id.replace("naver_", ""), 10);
-        await naver.trash(uid);
+        // id format: naver_{folder}_{uid}
+        const parts = id.split("_");
+        const uid = parseInt(parts.pop()!, 10);
+        const folder = parts.slice(1).join("_");
+        await naver.trash(folder, uid);
       }
     }
 

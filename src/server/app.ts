@@ -42,12 +42,13 @@ export function buildApp(
     return { body };
   });
 
-  app.get<{ Params: { uid: string } }>("/api/naver/:uid/body", async (req, reply) => {
+  app.get<{ Querystring: { folder: string; uid: string } }>("/api/naver/body", async (req, reply) => {
     const naver = connectors.get("naver");
     if (!naver || !(naver instanceof NaverMailConnector)) {
       return reply.status(400).send({ error: "Naver Mail not connected" });
     }
-    const body = await naver.getBody(parseInt(req.params.uid, 10));
+    const { folder, uid } = req.query;
+    const body = await naver.getBody(folder, parseInt(uid, 10));
     return { body };
   });
 

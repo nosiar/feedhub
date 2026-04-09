@@ -52,8 +52,12 @@ export async function fetchGmailBody(messageId: string): Promise<string> {
 }
 
 export async function fetchNaverBody(itemId: string): Promise<string> {
-  const uid = itemId.replace("naver_", "");
-  const res = await fetch(`${BASE}/naver/${uid}/body`);
+  // id format: naver_{folder}_{uid}
+  const parts = itemId.split("_");
+  const uid = parts.pop()!;
+  const folder = parts.slice(1).join("_");
+  const qs = new URLSearchParams({ folder, uid });
+  const res = await fetch(`${BASE}/naver/body?${qs}`);
   const data = await res.json();
   return data.body ?? "";
 }
