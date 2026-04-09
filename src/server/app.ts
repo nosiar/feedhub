@@ -15,6 +15,7 @@ import { telegramRoutes } from "./routes/telegram.js";
 import type { Connector, SourceType } from "../connectors/types.js";
 import type { Settings } from "../db/settings-repo.js";
 import { GmailConnector } from "../connectors/gmail.js";
+import { NaverMailConnector } from "../connectors/naver-mail.js";
 
 export function buildApp(
   connectors: Map<SourceType, Connector>,
@@ -38,6 +39,15 @@ export function buildApp(
       return reply.status(400).send({ error: "Gmail not connected" });
     }
     const body = await gmail.getBody(req.params.id);
+    return { body };
+  });
+
+  app.get<{ Params: { uid: string } }>("/api/naver/:uid/body", async (req, reply) => {
+    const naver = connectors.get("naver");
+    if (!naver || !(naver instanceof NaverMailConnector)) {
+      return reply.status(400).send({ error: "Naver Mail not connected" });
+    }
+    const body = await naver.getBody(parseInt(req.params.uid, 10));
     return { body };
   });
 

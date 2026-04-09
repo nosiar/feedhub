@@ -7,6 +7,7 @@ import { SlackConnector } from "./slack.js";
 import { KakaotalkConnector } from "./kakaotalk.js";
 import { TelegramConnector } from "./telegram.js";
 import { YouTubeConnector } from "./youtube.js";
+import { NaverMailConnector } from "./naver-mail.js";
 
 export function buildConnectors(settings: Settings): Map<SourceType, Connector> {
   const connectors = new Map<SourceType, Connector>();
@@ -31,6 +32,9 @@ export function buildConnectors(settings: Settings): Map<SourceType, Connector> 
   }
   if (settings.youtubeChannels.length > 0) {
     connectors.set("youtube", new YouTubeConnector(settings.youtubeChannels));
+  }
+  if (config.naver.email && config.naver.password) {
+    connectors.set("naver", new NaverMailConnector(config.naver));
   }
 
   return connectors;

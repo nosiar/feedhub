@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Connector, SourceType } from "../../connectors/types.js";
 import { dismissFeedItem } from "../../db/feed-repo.js";
 import { GmailConnector } from "../../connectors/gmail.js";
+import { NaverMailConnector } from "../../connectors/naver-mail.js";
 
 export function dismissRoutes(
   app: FastifyInstance,
@@ -14,6 +15,14 @@ export function dismissRoutes(
       const gmail = connectors.get("gmail");
       if (gmail instanceof GmailConnector) {
         await gmail.trash(id);
+      }
+    }
+
+    if (source === "naver") {
+      const naver = connectors.get("naver");
+      if (naver instanceof NaverMailConnector) {
+        const uid = parseInt(id.replace("naver_", ""), 10);
+        await naver.trash(uid);
       }
     }
 
