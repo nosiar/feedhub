@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { fetchOgPreview, fetchGmailBody, fetchPollResults, fetchReplies, type PollResult, type ReplyItem } from "../api.js";
+import { fetchOgPreview, fetchGmailBody, fetchNaverBody, fetchPollResults, fetchReplies, type PollResult, type ReplyItem } from "../api.js";
 
 // --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
 const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
+
+const EMAIL_SOURCES = new Set(["gmail", "naver"]);
 
 function Lightbox({
   urls,
@@ -81,6 +83,7 @@ function Lightbox({
 
 const SOURCE_ICONS: Record<string, string> = {
   gmail: "\u{1F4E7}",
+  naver: "\u{1F4E9}",
   kakaotalk: "\u{1F4AC}",
   slack: "\u{1F4AC}",
   rss: "\u{1F4F0}",
@@ -611,20 +614,21 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
 }) {
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isChat = CHAT_SOURCES.has(item.source);
-  const isGmail = item.source === "gmail";
-  const isExpandable = isChat || isGmail;
+  const isEmail = EMAIL_SOURCES.has(item.source);
+  const isExpandable = isChat || isEmail;
 
   const expanded = expandedProp ?? (isChat && !!defaultExpanded);
-  const [gmailBody, setGmailBody] = useState<string | null>(null);
-  const [gmailLoading, setGmailLoading] = useState(false);
+  const [emailBody, setEmailBody] = useState<string | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
 
-  // Fetch Gmail body when expanded
+  // Fetch email body when expanded
   useEffect(() => {
-    if (expanded && isGmail && !gmailBody && !gmailLoading) {
-      setGmailLoading(true);
-      fetchGmailBody(item.id).then(setGmailBody).finally(() => setGmailLoading(false));
+    if (expanded && isEmail && !emailBody && !emailLoading) {
+      setEmailLoading(true);
+      const fetchBody = item.source === "naver" ? fetchNaverBody : fetchGmailBody;
+      fetchBody(item.id).then(setEmailBody).finally(() => setEmailLoading(false));
     }
-  }, [expanded, isGmail, gmailBody, gmailLoading, item.id]);
+  }, [expanded, isEmail, emailBody, emailLoading, item.id, item.source]);
 
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
@@ -663,7 +667,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
           <span
             onClick={handleDismiss}
             style={{ cursor: "pointer", opacity: 0.6, fontSize: 14 }}
-            title={isGmail ? "휴지통으로 이동" : "피드에서 숨기기"}
+            title={isEmail ? "휴지통으로 이동" : "피드에서 숨기기"}
           >
             ✕
           </span>
@@ -684,19 +688,19 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
       )}
 
       {/* Body */}
-      {isGmail && expanded ? (
-        gmailLoading ? (
+      {isEmail && expanded ? (
+        emailLoading ? (
           <div style={{ padding: 12, color: "#999", fontSize: 13 }}>로딩 중...</div>
-        ) : gmailBody ? (
+        ) : emailBody ? (
           <div
-            key="gmail-shadow"
+            key="email-shadow"
             ref={(el) => {
               if (!el || el.shadowRoot) return;
               const shadow = el.attachShadow({ mode: "open" });
               const wrapper = document.createElement("div");
               wrapper.tabIndex = 0;
               wrapper.style.cssText = "font-size:14px;color:#3c4043;line-height:1.6;outline:none;overflow:auto;max-height:80vh;word-break:break-word;";
-              wrapper.innerHTML = gmailBody;
+              wrapper.innerHTML = emailBody;
               shadow.appendChild(wrapper);
               wrapper.focus();
             }}
