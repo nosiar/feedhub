@@ -36,4 +36,8 @@ export const config = {
   rss: {
     feeds: (process.env.RSS_FEEDS ?? "").split(",").filter(Boolean),
   },
+  naver: {
+    email: process.env.NAVER_EMAIL ?? "",
+    password: process.env.NAVER_PASSWORD ?? "",
+  },
 };
