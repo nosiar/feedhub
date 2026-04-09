@@ -290,7 +290,7 @@ export function App() {
       {showHelp && <KeyboardHelp onClose={() => setShowHelp(false)} />}
       {toast && (
         <Toast
-          message={toast.item.source === "gmail" ? "메일을 휴지통으로 이동합니다" : "피드에서 숨겼습니다"}
+          message={toast.item.source === "gmail" || toast.item.source === "naver" ? "메일을 휴지통으로 이동합니다" : "피드에서 숨겼습니다"}
           onUndo={handleUndo}
         />
       )}
