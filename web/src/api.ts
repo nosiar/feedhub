@@ -51,6 +51,13 @@ export async function fetchGmailBody(messageId: string): Promise<string> {
   return data.body ?? "";
 }
 
+export async function fetchNaverBody(itemId: string): Promise<string> {
+  const uid = itemId.replace("naver_", "");
+  const res = await fetch(`${BASE}/naver/${uid}/body`);
+  const data = await res.json();
+  return data.body ?? "";
+}
+
 export async function fetchOgPreview(
   url: string
 ): Promise<{ title: string; description: string; imageUrl: string; url: string } | null> {
@@ -101,6 +108,7 @@ export interface SettingsResponse {
   gmail: { connected: boolean };
   slack: { connected: boolean };
   telegram: { connected: boolean };
+  naver: { connected: boolean };
 }
 
 export async function getSettings(): Promise<SettingsResponse> {

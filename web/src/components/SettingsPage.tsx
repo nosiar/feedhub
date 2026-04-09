@@ -73,6 +73,7 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
       />
       <SourceStatus name="Gmail" icon="📧" connected={settings.gmail.connected} />
       <SourceStatus name="Slack" icon="💬" connected={settings.slack.connected} />
+      <SourceStatus name="Naver Mail" icon="📩" connected={settings.naver.connected} />
     </div>
   );
 }

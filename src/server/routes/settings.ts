@@ -14,6 +14,7 @@ export function settingsRoutes(
       gmail: { connected: !!config.gmail.refreshToken },
       slack: { connected: !!config.slack.botToken },
       telegram: { connected: !!config.telegram.session },
+      naver: { connected: !!(config.naver.email && config.naver.password) },
     };
   });
 

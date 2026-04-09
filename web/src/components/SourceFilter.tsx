@@ -6,6 +6,7 @@ export const SOURCES = [
   { key: "rss", label: "RSS" },
   { key: "telegram", label: "Telegram" },
   { key: "youtube", label: "YouTube" },
+  { key: "naver", label: "Naver" },
 ] as const;
 
 export function SourceFilter({
