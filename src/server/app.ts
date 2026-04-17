@@ -10,6 +10,7 @@ import { sourcesRoutes } from "./routes/sources.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { kakaoRoutes } from "./routes/kakao.js";
 import { dismissRoutes } from "./routes/dismiss.js";
+import { pinRoutes } from "./routes/pin.js";
 import { ogRoutes } from "./routes/og.js";
 import { telegramRoutes } from "./routes/telegram.js";
 import type { Connector, SourceType } from "../connectors/types.js";
@@ -30,6 +31,7 @@ export function buildApp(
   settingsRoutes(app, onSettingsChanged);
   kakaoRoutes(app);
   dismissRoutes(app, connectors);
+  pinRoutes(app);
   ogRoutes(app);
   telegramRoutes(app);
 
