@@ -20,6 +20,7 @@ export function App() {
   const [expandAll, setExpandAll] = useState(false);
   const [dismissedItems, setDismissedItems] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ item: FeedItem } | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasChat = items.some((i) => i.source === "kakaotalk" || i.source === "telegram");
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
@@ -51,6 +52,8 @@ export function App() {
           map.set(key, !next);
           return map;
         });
+        setErrorToast("고정 상태 변경 실패");
+        setTimeout(() => setErrorToast(null), 3000);
       });
     },
     [isPinned]
@@ -339,6 +342,7 @@ export function App() {
           onUndo={handleUndo}
         />
       )}
+      {errorToast && <Toast message={errorToast} />}
     </div>
   );
 }

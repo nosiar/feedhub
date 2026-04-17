@@ -3,7 +3,7 @@ export function Toast({
   onUndo,
 }: {
   message: string;
-  onUndo: () => void;
+  onUndo?: () => void;
 }) {
   return (
     <div
@@ -26,16 +26,14 @@ export function Toast({
       }}
     >
       <span>{message}</span>
-      <span
-        onClick={onUndo}
-        style={{
-          color: "#8ab4f8",
-          cursor: "pointer",
-          fontWeight: 600,
-        }}
-      >
-        실행취소
-      </span>
+      {onUndo && (
+        <span
+          onClick={onUndo}
+          style={{ color: "#8ab4f8", cursor: "pointer", fontWeight: 600 }}
+        >
+          실행취소
+        </span>
+      )}
     </div>
   );
 }
