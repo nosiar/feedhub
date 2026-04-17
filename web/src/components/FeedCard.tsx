@@ -664,12 +664,12 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
       }}
     >
       {/* Top row: source + author | dismiss + expand + time */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12, color: "#5f6368" }}>
-        <span>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4, fontSize: 12, color: "#5f6368" }}>
+        <span style={{ minWidth: 0, flex: 1 }}>
           {icon} {headerLabel}
           {item.author ? ` · ${item.author}` : ""}
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0, whiteSpace: "nowrap" }}>
           <button
             type="button"
             onClick={handleTogglePin}
@@ -678,9 +678,8 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
             style={{
               background: "none",
               border: "none",
-              padding: 0,
-              minWidth: 44,
-              minHeight: 44,
+              padding: "8px 6px",
+              margin: "-8px 0",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -703,9 +702,8 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
               style={{
                 background: "none",
                 border: "none",
-                padding: 0,
-                minWidth: 44,
-                minHeight: 44,
+                padding: "8px 6px",
+                margin: "-8px 0",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -719,8 +717,8 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
               ✕
             </button>
           )}
-          {isExpandable && (expanded ? "▲" : "▼")}{" "}
-          <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
+          {isExpandable && <span style={{ marginLeft: 2 }}>{expanded ? "▲" : "▼"}</span>}
+          <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })} style={{ marginLeft: 4 }}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
 
