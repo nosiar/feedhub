@@ -9,6 +9,7 @@ export interface FeedItem {
   url?: string;
   timestamp: string;
   metadata: Record<string, unknown>;
+  pinned?: boolean;
 }
 
 export async function fetchFeed(params: {
@@ -43,6 +44,21 @@ export async function triggerSync(source?: string): Promise<unknown> {
 export async function dismissFeedItem(source: string, id: string): Promise<void> {
   const qs = new URLSearchParams({ source, id });
   await fetch(`${BASE}/feed/dismiss?${qs}`, { method: "DELETE" });
+}
+
+export async function pinFeedItem(
+  source: string,
+  id: string,
+  pinned: boolean
+): Promise<void> {
+  const res = await fetch(`${BASE}/feed/pin`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source, id, pinned }),
+  });
+  if (!res.ok) {
+    throw new Error(`pin failed: ${res.status}`);
+  }
 }
 
 export async function fetchGmailBody(messageId: string): Promise<string> {
