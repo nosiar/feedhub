@@ -724,7 +724,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "8px 6px",
+                padding: "8px 0 8px 6px",
                 margin: "-8px 0 -8px 4px",
                 lineHeight: 1,
               }}
@@ -732,7 +732,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
               {expanded ? "▲" : "▼"}
             </span>
           )}
-          <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })} style={{ marginLeft: 4 }}>{timeAgo(item.timestamp)}</span>
+          <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
 
