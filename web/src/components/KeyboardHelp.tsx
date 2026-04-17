@@ -2,6 +2,7 @@ const SHORTCUTS = [
   { key: "j / k", desc: "다음 / 이전 아이템" },
   { key: "Enter / o", desc: "펼치기 / 접기" },
   { key: "d / x", desc: "삭제 (실행취소 가능)" },
+  { key: "p", desc: "고정 / 고정 해제" },
   { key: "v", desc: "링크 새 탭에서 열기" },
   { key: "Esc", desc: "접기" },
   { key: "e", desc: "전체 펼치기 / 접기" },
