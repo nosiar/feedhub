@@ -9,6 +9,7 @@ export interface FeedItem {
   url?: string;
   timestamp: Date;
   metadata: Record<string, unknown>;
+  pinned?: boolean;
 }
 
 export interface SyncCursor {
