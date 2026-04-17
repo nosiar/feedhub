@@ -669,27 +669,55 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
           {icon} {headerLabel}
           {item.author ? ` · ${item.author}` : ""}
         </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span
+        <span style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <button
+            type="button"
             onClick={handleTogglePin}
+            aria-label={item.pinned ? "고정 해제" : "고정"}
+            title={item.pinned ? "고정 해제" : "고정"}
             style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              minWidth: 44,
+              minHeight: 44,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               cursor: "pointer",
               opacity: item.pinned ? 1 : 0.5,
               fontSize: 14,
+              lineHeight: 1,
+              color: "inherit",
               filter: item.pinned ? "none" : "grayscale(1)",
             }}
-            title={item.pinned ? "고정 해제" : "고정"}
           >
             📌
-          </span>
+          </button>
           {!item.pinned && (
-            <span
+            <button
+              type="button"
               onClick={handleDismiss}
-              style={{ cursor: "pointer", opacity: 0.6, fontSize: 14 }}
+              aria-label={isEmail ? "휴지통으로 이동" : "피드에서 숨기기"}
               title={isEmail ? "휴지통으로 이동" : "피드에서 숨기기"}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                minWidth: 44,
+                minHeight: 44,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                opacity: 0.6,
+                fontSize: 14,
+                lineHeight: 1,
+                color: "inherit",
+              }}
             >
               ✕
-            </span>
+            </button>
           )}
           {isExpandable && (expanded ? "▲" : "▼")}{" "}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
