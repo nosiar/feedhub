@@ -603,10 +603,11 @@ function CompactMedia({ item }: { item: FeedItem }) {
   );
 }
 
-export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: expandedProp, cardRef, onToggleExpand }: {
+export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused, expanded: expandedProp, cardRef, onToggleExpand }: {
   item: FeedItem;
   defaultExpanded?: boolean;
   onDelete?: (item: FeedItem) => void;
+  onTogglePin?: (item: FeedItem) => void;
   focused?: boolean;
   expanded?: boolean;
   cardRef?: React.Ref<HTMLDivElement>;
@@ -633,6 +634,11 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
   const handleDismiss = (e: MouseEvent) => {
     e.stopPropagation();
     onDelete?.(item);
+  };
+
+  const handleTogglePin = (e: MouseEvent) => {
+    e.stopPropagation();
+    onTogglePin?.(item);
   };
 
   const handleClick = () => {
@@ -665,12 +671,26 @@ export function FeedCard({ item, defaultExpanded, onDelete, focused, expanded: e
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
-            onClick={handleDismiss}
-            style={{ cursor: "pointer", opacity: 0.6, fontSize: 14 }}
-            title={isEmail ? "휴지통으로 이동" : "피드에서 숨기기"}
+            onClick={handleTogglePin}
+            style={{
+              cursor: "pointer",
+              opacity: item.pinned ? 1 : 0.5,
+              fontSize: 14,
+              filter: item.pinned ? "none" : "grayscale(1)",
+            }}
+            title={item.pinned ? "고정 해제" : "고정"}
           >
-            ✕
+            📌
           </span>
+          {!item.pinned && (
+            <span
+              onClick={handleDismiss}
+              style={{ cursor: "pointer", opacity: 0.6, fontSize: 14 }}
+              title={isEmail ? "휴지통으로 이동" : "피드에서 숨기기"}
+            >
+              ✕
+            </span>
+          )}
           {isExpandable && (expanded ? "▲" : "▼")}{" "}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })}>{timeAgo(item.timestamp)}</span>
         </span>
