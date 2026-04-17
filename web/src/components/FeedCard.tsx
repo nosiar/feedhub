@@ -717,7 +717,21 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
               ✕
             </button>
           )}
-          {isExpandable && <span style={{ marginLeft: 2 }}>{expanded ? "▲" : "▼"}</span>}
+          {isExpandable && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px 6px",
+                margin: "-8px 0 -8px 4px",
+                lineHeight: 1,
+              }}
+            >
+              {expanded ? "▲" : "▼"}
+            </span>
+          )}
           <span title={new Date(item.timestamp).toLocaleString("ko-KR", { hour12: false })} style={{ marginLeft: 4 }}>{timeAgo(item.timestamp)}</span>
         </span>
       </div>
