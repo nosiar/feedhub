@@ -9,6 +9,7 @@ export function FeedList({
   hasMore,
   expandAll,
   onDelete,
+  onTogglePin,
   focusedIndex,
   expandedIndex,
   onToggleExpand,
@@ -19,6 +20,7 @@ export function FeedList({
   hasMore: boolean;
   expandAll?: boolean;
   onDelete?: (item: FeedItem) => void;
+  onTogglePin?: (item: FeedItem) => void;
   focusedIndex?: number;
   expandedIndex?: number | null;
   onToggleExpand?: (index: number) => void;
@@ -65,6 +67,7 @@ export function FeedList({
             item={item}
             defaultExpanded={expandAll}
             onDelete={onDelete}
+            onTogglePin={onTogglePin}
             focused={focusedIndex === i}
             expanded={expandedIndex === i ? true : undefined}
             cardRef={cardRefs.current.get(i)}
