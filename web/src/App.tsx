@@ -7,7 +7,7 @@ import { FeedList } from "./components/FeedList.js";
 import { SettingsPage } from "./components/SettingsPage.js";
 import { Toast } from "./components/Toast.js";
 import { KeyboardHelp } from "./components/KeyboardHelp.js";
-import { triggerSync, dismissFeedItem, type FeedItem } from "./api.js";
+import { triggerSync, dismissFeedItem, pinFeedItem, type FeedItem } from "./api.js";
 
 const UNDO_DELAY = 4000;
 
@@ -25,8 +25,40 @@ export function App() {
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [pinnedOverrides, setPinnedOverrides] = useState<Map<string, boolean>>(new Map());
+
+  const isPinned = useCallback(
+    (item: FeedItem) => {
+      const key = `${item.source}-${item.id}`;
+      const override = pinnedOverrides.get(key);
+      return override ?? !!item.pinned;
+    },
+    [pinnedOverrides]
+  );
+
+  const handleTogglePin = useCallback(
+    (item: FeedItem) => {
+      const key = `${item.source}-${item.id}`;
+      const next = !isPinned(item);
+      setPinnedOverrides((prev) => {
+        const map = new Map(prev);
+        map.set(key, next);
+        return map;
+      });
+      pinFeedItem(item.source, item.id, next).catch(() => {
+        setPinnedOverrides((prev) => {
+          const map = new Map(prev);
+          map.set(key, !next);
+          return map;
+        });
+      });
+    },
+    [isPinned]
+  );
 
   const handleDismiss = useCallback((item: FeedItem) => {
+    if (isPinned(item)) return;
+
     // Cancel previous pending dismiss
     if (dismissTimer.current) {
       clearTimeout(dismissTimer.current);
@@ -54,7 +86,7 @@ export function App() {
       setToast(null);
       dismissTimer.current = null;
     }, UNDO_DELAY);
-  }, [toast, items, dismissedItems]);
+  }, [toast, items, dismissedItems, isPinned]);
 
   const handleUndo = useCallback(() => {
     if (!toast) return;
@@ -73,22 +105,29 @@ export function App() {
 
   const visibleItems = items.filter((i) => !dismissedItems.has(`${i.source}-${i.id}`));
 
+  const decoratedItems = visibleItems.map((i) => {
+    const key = `${i.source}-${i.id}`;
+    const override = pinnedOverrides.get(key);
+    return override === undefined ? i : { ...i, pinned: override };
+  });
+
   const handleDismissAll = useCallback(() => {
-    if (visibleItems.length === 0) return;
-    if (!confirm(`${visibleItems.length}개 항목을 모두 숨길까요?`)) return;
-    // Hide from UI immediately
+    const dismissible = visibleItems.filter((i) => !isPinned(i));
+    const pinnedCount = visibleItems.length - dismissible.length;
+    if (dismissible.length === 0) return;
+    const suffix = pinnedCount > 0 ? ` (고정 ${pinnedCount}개 제외)` : "";
+    if (!confirm(`${dismissible.length}개 항목을 모두 숨길까요?${suffix}`)) return;
     setDismissedItems((prev) => {
       const next = new Set(prev);
-      for (const item of visibleItems) next.add(`${item.source}-${item.id}`);
+      for (const item of dismissible) next.add(`${item.source}-${item.id}`);
       return next;
     });
-    // Send all to server immediately (no undo for bulk)
-    for (const item of visibleItems) {
+    for (const item of dismissible) {
       dismissFeedItem(item.source, item.id);
     }
     setFocusedIndex(-1);
     setExpandedIndex(null);
-  }, [visibleItems]);
+  }, [visibleItems, isPinned]);
 
   // Auto-load more when all visible items are dismissed
   useEffect(() => {
@@ -136,6 +175,11 @@ export function App() {
           handleDismiss(visibleItems[focusedIndex]);
           setExpandedIndex(null);
         }
+      } else if (code === "KeyP" && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
+          handleTogglePin(visibleItems[focusedIndex]);
+        }
       } else if (code === "KeyV") {
         if (focusedIndex >= 0 && focusedIndex < visibleItems.length) {
           const url = visibleItems[focusedIndex].url;
@@ -163,7 +207,7 @@ export function App() {
 
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [view, focusedIndex, visibleItems, handleDismiss, showHelp]);
+  }, [view, focusedIndex, visibleItems, handleDismiss, handleTogglePin, showHelp]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -277,12 +321,13 @@ export function App() {
         </div>
       </div>
       <FeedList
-        items={visibleItems}
+        items={decoratedItems}
         loading={loading}
         onLoadMore={loadMore}
         hasMore={!!cursor}
         expandAll={expandAll}
         onDelete={handleDismiss}
+        onTogglePin={handleTogglePin}
         focusedIndex={focusedIndex}
         expandedIndex={expandedIndex}
         onToggleExpand={(i) => { setFocusedIndex(i); setExpandedIndex((prev) => (prev === i ? null : i)); }}
