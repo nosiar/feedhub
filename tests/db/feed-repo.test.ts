@@ -5,6 +5,8 @@ const mockCollection = {
   bulkWrite: vi.fn().mockResolvedValue({ upsertedCount: 2 }),
   find: vi.fn(),
   countDocuments: vi.fn().mockResolvedValue(0),
+  updateOne: vi.fn(),
+  findOne: vi.fn(),
 };
 
 const mockDb = {
@@ -78,6 +80,52 @@ describe("feed-repo", () => {
       await searchFeed("keyword", {});
       const filter = mockCollection.find.mock.calls[0][0];
       expect(filter.$text).toEqual({ $search: "keyword" });
+    });
+  });
+
+  describe("upsertFeedItems pinned default", () => {
+    it("sets pinned: false on insert only", async () => {
+      const items: FeedItem[] = [
+        {
+          id: "rss-2",
+          source: "rss",
+          title: "T",
+          body: "B",
+          author: "A",
+          timestamp: new Date("2026-04-17"),
+          metadata: {},
+        },
+      ];
+      await upsertFeedItems(items);
+      const ops = mockCollection.bulkWrite.mock.calls[0][0];
+      expect(ops[0].updateOne.update.$setOnInsert).toEqual({
+        dismissed: false,
+        pinned: false,
+      });
+    });
+  });
+
+  describe("setPinned", () => {
+    it("updates the pinned flag for the given item", async () => {
+      const updateOne = vi.fn().mockResolvedValue({});
+      mockCollection.updateOne = updateOne;
+      const { setPinned } = await import("../../src/db/feed-repo.js");
+      await setPinned("rss", "rss-3", true);
+      expect(updateOne).toHaveBeenCalledWith(
+        { source: "rss", id: "rss-3" },
+        { $set: { pinned: true } }
+      );
+    });
+  });
+
+  describe("getFeedItem", () => {
+    it("returns the single matching item or null", async () => {
+      const findOne = vi.fn().mockResolvedValue({ source: "rss", id: "rss-4", pinned: true });
+      mockCollection.findOne = findOne;
+      const { getFeedItem } = await import("../../src/db/feed-repo.js");
+      const result = await getFeedItem("rss", "rss-4");
+      expect(findOne).toHaveBeenCalledWith({ source: "rss", id: "rss-4" });
+      expect(result?.pinned).toBe(true);
     });
   });
 });

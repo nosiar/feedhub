@@ -14,7 +14,7 @@ export async function upsertFeedItems(
       filter: { source: item.source, id: item.id },
       update: {
         $set: item,
-        $setOnInsert: { dismissed: false },
+        $setOnInsert: { dismissed: false, pinned: false },
       },
       upsert: true,
     },
@@ -32,6 +32,29 @@ export async function dismissFeedItem(source: SourceType, id: string): Promise<v
     { source, id },
     { $set: { dismissed: true } }
   );
+}
+
+export async function setPinned(
+  source: SourceType,
+  id: string,
+  pinned: boolean
+): Promise<void> {
+  const db = await getDb();
+  await db.collection(COLLECTION).updateOne(
+    { source, id },
+    { $set: { pinned } }
+  );
+}
+
+export async function getFeedItem(
+  source: SourceType,
+  id: string
+): Promise<FeedItem | null> {
+  const db = await getDb();
+  const doc = await db
+    .collection<FeedItem>(COLLECTION)
+    .findOne({ source, id });
+  return doc ?? null;
 }
 
 export interface QueryOptions {
