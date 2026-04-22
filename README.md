@@ -1,26 +1,29 @@
 # feedhub
 
-Unified feed reader that aggregates Gmail, KakaoTalk, Telegram, RSS, and Slack into a single web UI.
+Unified feed reader that aggregates Gmail, Naver Mail, KakaoTalk, Telegram, Slack, RSS, and YouTube into a single web UI.
 
 <img src="web/public/favicon.svg" alt="feedhub" width="64">
 
 ## Features
 
 - **Unified timeline** — all sources in one chronological feed
-- **Source filtering** — filter by Gmail, KakaoTalk, Telegram, Slack, RSS
+- **Source filtering** — filter by Gmail, Naver, KakaoTalk, Telegram, Slack, RSS, YouTube
 - **Search** — full-text search across all sources
-- **Expand/collapse** — click Gmail or chat messages to read inline
+- **Expand/collapse** — click Gmail/Naver or chat messages to read inline
 - **Gmail integration** — read full email body, trash from feed
+- **Naver Mail** — IMAP-based sync across INBOX and custom folders with inline body view
 - **KakaoTalk** — chat messages with photos, link previews, sender names
 - **Telegram** — channel/group messages with link previews, OG fallback, polls, video, reply threads
 - **RSS** — subscribe to any RSS/Atom feed
+- **YouTube** — subscribe to channels via handle/URL/ID (Shorts filtered out)
 - **Link previews** — OG meta cards for shared URLs (with shimmer loading)
 - **Image lightbox** — click photos to view full size with arrow key navigation
 - **Video playback** — inline video player for Telegram media
 - **Polls** — Telegram poll results with voter counts and percentages
 - **Reply threads** — expandable comment/reply threads for Telegram messages
+- **Pin** — pin important items to the top of the feed
 - **Dismiss** — hide any item from feed (soft delete, survives re-sync)
-- **Settings page** — manage RSS feeds, KakaoTalk chats, Telegram channels from the web UI
+- **Settings page** — manage RSS feeds, KakaoTalk chats, Telegram channels, YouTube channels from the web UI
 - **Auto-refresh** — frontend polls every 60s, backend syncs every 5min
 
 ## Tech Stack
@@ -31,9 +34,10 @@ Unified feed reader that aggregates Gmail, KakaoTalk, Telegram, RSS, and Slack i
 | Frontend | React, Vite |
 | Database | MongoDB |
 | Gmail | Google Gmail API (OAuth2) |
+| Naver Mail | IMAP (imapflow + mailparser) |
 | KakaoTalk | [kakaocli](../kakaocli) (macOS) |
 | Telegram | GramJS (MTProto user API) |
-| RSS | rss-parser |
+| RSS / YouTube | rss-parser |
 | Scheduling | node-cron |
 
 ## Setup
@@ -80,8 +84,14 @@ TELEGRAM_CHATS=
 # Slack (optional)
 SLACK_BOT_TOKEN=
 
+# Naver Mail (optional, IMAP)
+NAVER_EMAIL=
+NAVER_PASSWORD=
+
 # RSS (initial seed, managed via settings page after first run)
 RSS_FEEDS=https://example.com/feed.xml,https://other.com/rss
+
+# YouTube channels are managed via the Settings page
 
 PORT=3000
 SYNC_INTERVAL=5
@@ -110,6 +120,14 @@ SYNC_INTERVAL=5
 ### KakaoTalk Setup
 
 Requires [kakaocli](../kakaocli) installed on macOS. Set `KAKAOCLI_PATH` and `ENABLE_KAKAOTALK=true`. Add chats via the Settings page or `KAKAO_CHATS` env var.
+
+### Naver Mail Setup
+
+Enable IMAP in Naver Mail settings, then set `NAVER_EMAIL` and `NAVER_PASSWORD` (use an app-specific password if 2FA is enabled). Default folders synced: `INBOX`, `청구·결제`, `SNS`, `프로모션`, `카페`.
+
+### YouTube Setup
+
+No credentials required — uses public RSS feeds. Add channels via the Settings page by pasting a channel URL, `@handle`, or raw `UC...` channel ID.
 
 ## Run
 
@@ -146,13 +164,18 @@ Open http://localhost:3000
 | GET | `/api/settings` | Get current settings |
 | PUT | `/api/settings` | Update settings (RSS feeds, chats) |
 | DELETE | `/api/feed/dismiss?source=&id=` | Dismiss a feed item |
+| PUT | `/api/feed/pin` | Pin/unpin a feed item |
 | GET | `/api/gmail/:id/body` | Fetch full Gmail body |
+| GET | `/api/naver/body?folder=&uid=` | Fetch full Naver Mail body |
 | GET | `/api/kakao/chats` | List KakaoTalk chats |
 | GET | `/api/telegram/chats` | List Telegram dialogs |
 | GET | `/api/og?url=` | Fetch OG meta for a URL |
 | GET | `/api/settings/rss-title?url=` | Fetch RSS feed title |
+| GET | `/api/settings/youtube-channel?input=` | Resolve YouTube channel from URL/handle/ID |
 | GET | `/api/telegram/photo/:chatId/:msgId` | Fetch Telegram photo |
-| GET | `/api/telegram/video/:chatId/:msgId` | Fetch Telegram video |
+| GET | `/api/telegram/video/:chatId/:msgId` | Fetch Telegram video (with Range support) |
+| GET | `/api/telegram/video-thumb/:chatId/:msgId` | Fetch Telegram video thumbnail |
+| GET | `/api/telegram/file/:chatId/:msgId` | Download Telegram document attachment |
 | GET | `/api/telegram/poll/:chatId/:msgId` | Fetch Telegram poll results |
 | GET | `/api/telegram/replies/:chatId/:msgId` | Fetch Telegram reply thread |
 
@@ -161,7 +184,7 @@ Open http://localhost:3000
 ```
 feedhub/
 ├── src/
-│   ├── connectors/        # Source adapters (gmail, kakaotalk, telegram, rss, slack)
+│   ├── connectors/        # Source adapters (gmail, naver-mail, kakaotalk, telegram, slack, rss, youtube)
 │   │   ├── types.ts       # FeedItem, Connector interface
 │   │   └── registry.ts    # Builds connectors from settings
 │   ├── db/                # MongoDB layer
