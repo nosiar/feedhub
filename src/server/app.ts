@@ -11,6 +11,7 @@ import { settingsRoutes } from "./routes/settings.js";
 import { kakaoRoutes } from "./routes/kakao.js";
 import { dismissRoutes } from "./routes/dismiss.js";
 import { pinRoutes } from "./routes/pin.js";
+import { kakaoImageRoutes } from "./routes/kakao-image.js";
 import { ogRoutes } from "./routes/og.js";
 import { telegramRoutes } from "./routes/telegram.js";
 import type { Connector, SourceType } from "../connectors/types.js";
@@ -30,6 +31,7 @@ export function buildApp(
   sourcesRoutes(app, connectors);
   settingsRoutes(app, onSettingsChanged);
   kakaoRoutes(app);
+  kakaoImageRoutes(app);
   dismissRoutes(app, connectors);
   pinRoutes(app);
   ogRoutes(app);
