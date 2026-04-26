@@ -64,4 +64,18 @@ describe("PUT /api/feed/pin with kakao image expireAt toggle", () => {
     const doc = await db.collection("kakao_images").findOne({ feedItemId: "msg-3" });
     expect(doc?.expireAt).toBeInstanceOf(Date);
   });
+
+  it("returns 400 for invalid body", async () => {
+    const missing = await app.inject({
+      method: "PUT", url: "/api/feed/pin",
+      payload: { source: "kakaotalk", pinned: true },
+    });
+    expect(missing.statusCode).toBe(400);
+
+    const wrongType = await app.inject({
+      method: "PUT", url: "/api/feed/pin",
+      payload: { source: "kakaotalk", id: "x", pinned: "true" },
+    });
+    expect(wrongType.statusCode).toBe(400);
+  });
 });
