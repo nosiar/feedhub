@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Connector, SourceType } from "../../connectors/types.js";
 import { dismissFeedItem, getFeedItem } from "../../db/feed-repo.js";
+import { deleteKakaoImagesByFeedItem } from "../../db/kakao-images-repo.js";
 import { GmailConnector } from "../../connectors/gmail.js";
 import { NaverMailConnector } from "../../connectors/naver-mail.js";
 
@@ -34,6 +35,11 @@ export function dismissRoutes(
     }
 
     await dismissFeedItem(source as SourceType, id);
+
+    if (source === "kakaotalk") {
+      await deleteKakaoImagesByFeedItem(id);
+    }
+
     return { ok: true };
   });
 }

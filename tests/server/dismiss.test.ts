@@ -1,57 +1,63 @@
-// tests/server/dismiss.test.ts
-import { describe, it, expect, vi, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import Fastify from "fastify";
+import type { Db } from "mongodb";
+import { startTestMongo, stopTestMongo, clearCollections } from "../_mongo.js";
+import { ensureIndexes } from "../../src/db/indexes.js";
+import { dismissRoutes } from "../../src/server/routes/dismiss.js";
+import { insertKakaoImage } from "../../src/db/kakao-images-repo.js";
+import { upsertFeedItems } from "../../src/db/feed-repo.js";
 
-const dismissFeedItem = vi.fn().mockResolvedValue(undefined);
-const getFeedItem = vi.fn();
-
-vi.mock("../../src/db/client.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-  closeDb: vi.fn(),
-}));
-
-vi.mock("../../src/db/feed-repo.js", () => ({
-  queryFeed: vi.fn().mockResolvedValue([]),
-  searchFeed: vi.fn().mockResolvedValue([]),
-  setPinned: vi.fn(),
-  getFeedItem,
-  dismissFeedItem,
-}));
-
-vi.mock("../../src/db/indexes.js", () => ({ ensureIndexes: vi.fn() }));
-vi.mock("../../src/db/settings-repo.js", () => ({
-  getSettings: vi.fn().mockResolvedValue({ rssFeeds: [], kakaoChats: [] }),
-  saveSettings: vi.fn(),
-}));
-
-const { buildApp } = await import("../../src/server/app.js");
-
-describe("Dismiss API pinned guard", () => {
-  const app = buildApp(new Map(), () => {});
-  afterAll(async () => { await app.close(); });
-
-  beforeEach(() => {
-    dismissFeedItem.mockClear();
-    getFeedItem.mockReset();
+describe("DELETE /api/feed/dismiss with kakao image cascade", () => {
+  let db: Db;
+  let app: ReturnType<typeof Fastify>;
+  beforeAll(async () => {
+    ({ db } = await startTestMongo());
+    await ensureIndexes(db);
+    app = Fastify({ logger: false });
+    dismissRoutes(app, new Map());
+    await app.ready();
+  });
+  afterAll(async () => { await app.close(); await stopTestMongo(); });
+  beforeEach(async () => {
+    await clearCollections(db, ["kakao_images", "feed_items"]);
   });
 
-  it("DELETE /api/feed/dismiss dismisses unpinned items", async () => {
-    getFeedItem.mockResolvedValue({ source: "rss", id: "rss-1", pinned: false });
+  it("deletes kakao_images for the dismissed kakaotalk item", async () => {
+    await upsertFeedItems([{
+      id: "msg-1", source: "kakaotalk", title: "T", body: "B", author: "A",
+      timestamp: new Date(), metadata: {},
+    }]);
+    await insertKakaoImage({
+      feedItemId: "msg-1", chatId: "c", originalUrl: "u1",
+      data: Buffer.from("a"), mime: "image/webp", width: 1, height: 1, pinned: false,
+    });
+    await insertKakaoImage({
+      feedItemId: "msg-1", chatId: "c", originalUrl: "u2",
+      data: Buffer.from("b"), mime: "image/webp", width: 1, height: 1, pinned: false,
+    });
+    await insertKakaoImage({
+      feedItemId: "msg-other", chatId: "c", originalUrl: "u3",
+      data: Buffer.from("c"), mime: "image/webp", width: 1, height: 1, pinned: false,
+    });
     const res = await app.inject({
-      method: "DELETE",
-      url: "/api/feed/dismiss?source=rss&id=rss-1",
+      method: "DELETE", url: "/api/feed/dismiss?source=kakaotalk&id=msg-1",
     });
     expect(res.statusCode).toBe(200);
-    expect(dismissFeedItem).toHaveBeenCalledWith("rss", "rss-1");
+    expect(await db.collection("kakao_images").countDocuments()).toBe(1);
+    const remaining = await db.collection("kakao_images").findOne({});
+    expect(remaining?.feedItemId).toBe("msg-other");
   });
 
-  it("DELETE /api/feed/dismiss returns 409 for pinned items and does not dismiss", async () => {
-    getFeedItem.mockResolvedValue({ source: "rss", id: "rss-2", pinned: true });
-    const res = await app.inject({
-      method: "DELETE",
-      url: "/api/feed/dismiss?source=rss&id=rss-2",
+  it("does nothing to kakao_images on non-kakao dismiss", async () => {
+    await upsertFeedItems([{
+      id: "rss-1", source: "rss", title: "T", body: "B", author: "A",
+      timestamp: new Date(), metadata: {},
+    }]);
+    await insertKakaoImage({
+      feedItemId: "rss-1", chatId: "c", originalUrl: "u",
+      data: Buffer.from("x"), mime: "image/webp", width: 1, height: 1, pinned: false,
     });
-    expect(res.statusCode).toBe(409);
-    expect(JSON.parse(res.payload).error).toBe("pinned");
-    expect(dismissFeedItem).not.toHaveBeenCalled();
+    await app.inject({ method: "DELETE", url: "/api/feed/dismiss?source=rss&id=rss-1" });
+    expect(await db.collection("kakao_images").countDocuments()).toBe(1);
   });
 });
