@@ -51,3 +51,42 @@ export async function getKakaoImage(
   const bin = doc.data as Binary;
   return { data: Buffer.from(bin.buffer), mime: String(doc.mime) };
 }
+
+export async function deleteKakaoImagesByFeedItem(feedItemId: string): Promise<number> {
+  const db = await getDb();
+  const r = await db.collection(COLLECTION).deleteMany({ source: "kakaotalk", feedItemId });
+  return r.deletedCount ?? 0;
+}
+
+export async function pinKakaoImagesByFeedItem(feedItemId: string): Promise<void> {
+  const db = await getDb();
+  await db.collection(COLLECTION).updateMany(
+    { source: "kakaotalk", feedItemId },
+    { $unset: { expireAt: "" } },
+  );
+}
+
+export async function unpinKakaoImagesByFeedItem(feedItemId: string): Promise<void> {
+  const db = await getDb();
+  await db.collection(COLLECTION).updateMany(
+    { source: "kakaotalk", feedItemId },
+    { $set: { expireAt: new Date(Date.now() + TTL_DAYS * 86400_000) } },
+  );
+}
+
+export interface StoredImage {
+  _id: string;
+  originalUrl: string;
+}
+
+export async function listKakaoImagesByFeedItem(feedItemId: string): Promise<StoredImage[]> {
+  const db = await getDb();
+  const docs = await db
+    .collection(COLLECTION)
+    .find({ source: "kakaotalk", feedItemId }, { projection: { originalUrl: 1 } })
+    .toArray();
+  return docs.map((d) => ({
+    _id: (d._id as ObjectId).toHexString(),
+    originalUrl: String(d.originalUrl),
+  }));
+}
