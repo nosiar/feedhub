@@ -26,6 +26,7 @@ interface ParsedAttachment {
 }
 
 const FETCH_CONCURRENCY = 4;
+const ITEM_CONCURRENCY = 4;
 const INTERNAL_PREFIX = "/api/kakao/image/";
 
 function parseAttachment(attachment?: string): ParsedAttachment {
@@ -172,7 +173,7 @@ export class KakaotalkConnector implements Connector {
       }
     }
 
-    await Promise.all(allItems.map((item) => rewriteImagesForItem(item)));
+    await mapWithConcurrency(allItems, ITEM_CONCURRENCY, (item) => rewriteImagesForItem(item));
 
     allItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     return { items: allItems, newCursor: maxId };
