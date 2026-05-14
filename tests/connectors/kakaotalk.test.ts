@@ -143,6 +143,32 @@ describe("KakaotalkConnector image rewrite", () => {
     expect(urls).toEqual(["https://k/dead.jpg"]);
   });
 
+  it("drops non-http attachment urls (e.g. kakao emoticon paths) without attempting fetch", async () => {
+    const att = JSON.stringify({
+      url: "1110001.emot_027.gif",
+      name: "(이모티콘)",
+      alt: "카카오 이모티콘",
+    });
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        const callback = cb as (e: Error | null, s: string) => void;
+        callback(null, JSON.stringify([
+          { id: "30", chat_id: "c1", sender_id: "s", sender: "S",
+            text: "아! ㅋㅋㅋ", attachment: att, type: "file",
+            is_from_me: false, timestamp: "2026-04-20T01:00:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const c = new (await import("../../src/connectors/kakaotalk.js")).KakaotalkConnector(
+      "kakaocli", [{ id: "c1", name: "C1" }],
+    );
+    const { items } = await c.sync(null);
+    const urls = (items[0].metadata as { imageUrls?: string[] }).imageUrls;
+    expect(urls ?? []).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("reuses cached internal URL from kakao_images for the same originalUrl (idempotent re-sync)", async () => {
     const { insertKakaoImage } = await import("../../src/db/kakao-images-repo.js");
     const cachedId = await insertKakaoImage({

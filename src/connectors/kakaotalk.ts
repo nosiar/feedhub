@@ -29,6 +29,10 @@ const FETCH_CONCURRENCY = 4;
 const ITEM_CONCURRENCY = 4;
 const INTERNAL_PREFIX = "/api/kakao/image/";
 
+function isHttpUrl(value: unknown): value is string {
+  return typeof value === "string" && /^https?:\/\//i.test(value);
+}
+
 function parseAttachment(attachment?: string): ParsedAttachment {
   if (!attachment) return { imageUrls: [] };
   try {
@@ -43,8 +47,8 @@ function parseAttachment(attachment?: string): ParsedAttachment {
       if (title && url) linkPreview = { title, description, imageUrl, url };
     }
     let imageUrls: string[] = [];
-    if (Array.isArray(data.imageUrls)) imageUrls = data.imageUrls;
-    else if (data.url && !scrap) imageUrls = [data.url];
+    if (Array.isArray(data.imageUrls)) imageUrls = data.imageUrls.filter(isHttpUrl);
+    else if (isHttpUrl(data.url) && !scrap) imageUrls = [data.url];
     return { imageUrls, linkPreview };
   } catch {
     return { imageUrls: [] };
