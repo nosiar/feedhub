@@ -30,13 +30,3 @@ export async function saveSettings(settings: Settings): Promise<void> {
   );
 }
 
-export async function seedSettings(
-  envRssFeeds: string[],
-  envKakaoChats: { id: string; name: string }[]
-): Promise<void> {
-  const db = await getDb();
-  const existing = await db.collection(COLLECTION).findOne({ _id: "global" as any });
-  if (existing) return;
-  const rssFeeds = envRssFeeds.map((url) => ({ url, title: "" }));
-  await saveSettings({ rssFeeds, kakaoChats: envKakaoChats, telegramChats: [], youtubeChannels: [] });
-}

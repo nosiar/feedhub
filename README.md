@@ -73,7 +73,6 @@ GMAIL_REFRESH_TOKEN=
 # KakaoTalk (optional, macOS only)
 KAKAOCLI_PATH=/path/to/kakaocli
 ENABLE_KAKAOTALK=true
-KAKAO_CHATS=chatId1:name1,chatId2:name2
 
 # Telegram (optional)
 TELEGRAM_API_ID=
@@ -88,10 +87,7 @@ SLACK_BOT_TOKEN=
 NAVER_EMAIL=
 NAVER_PASSWORD=
 
-# RSS (initial seed, managed via settings page after first run)
-RSS_FEEDS=https://example.com/feed.xml,https://other.com/rss
-
-# YouTube channels are managed via the Settings page
+# RSS feeds and YouTube channels are managed via the Settings page
 
 PORT=3000
 SYNC_INTERVAL=5
@@ -119,7 +115,7 @@ SYNC_INTERVAL=5
 
 ### KakaoTalk Setup
 
-Requires [kakaocli](../kakaocli) installed on macOS. Set `KAKAOCLI_PATH` and `ENABLE_KAKAOTALK=true`. Add chats via the Settings page or `KAKAO_CHATS` env var.
+Requires [kakaocli](../kakaocli) installed on macOS. Set `KAKAOCLI_PATH` and `ENABLE_KAKAOTALK=true`. Add chats via the Settings page.
 
 ### Naver Mail Setup
 

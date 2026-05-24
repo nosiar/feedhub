@@ -4,16 +4,13 @@ import { getDb, closeDb } from "./db/client.js";
 import { ensureIndexes } from "./db/indexes.js";
 import { buildApp } from "./server/app.js";
 import { startScheduler } from "./scheduler.js";
-import { getSettings, seedSettings } from "./db/settings-repo.js";
+import { getSettings } from "./db/settings-repo.js";
 import { buildConnectors } from "./connectors/registry.js";
 import type { Connector, SourceType } from "./connectors/types.js";
 
 async function main() {
   const db = await getDb();
   await ensureIndexes(db);
-
-  // Seed settings from .env on first run
-  await seedSettings(config.rss.feeds, config.kakaocli.chats);
 
   const settings = await getSettings();
   const connectors = buildConnectors(settings);

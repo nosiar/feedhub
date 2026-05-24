@@ -7,13 +7,6 @@ export const config = {
   kakaocli: {
     path: process.env.KAKAOCLI_PATH ?? "kakaocli",
     enabled: process.env.ENABLE_KAKAOTALK === "true",
-    chats: (process.env.KAKAO_CHATS ?? "")
-      .split(",")
-      .filter(Boolean)
-      .map((entry) => {
-        const [id, ...rest] = entry.split(":");
-        return { id, name: rest.join(":") || id };
-      }),
   },
   gmail: {
     clientId: process.env.GMAIL_CLIENT_ID ?? "",
@@ -32,9 +25,6 @@ export const config = {
       const [id, ...rest] = entry.split(":");
       return { id, name: rest.join(":") || id };
     }),
-  },
-  rss: {
-    feeds: (process.env.RSS_FEEDS ?? "").split(",").filter(Boolean),
   },
   naver: {
     email: process.env.NAVER_EMAIL ?? "",
