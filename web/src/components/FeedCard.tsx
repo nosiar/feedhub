@@ -239,9 +239,9 @@ function getReplies(item: FeedItem): { replyCount: number; repliesUrl: string } 
   return null;
 }
 
-function getFileAttachment(item: FeedItem): { fileName: string; fileSize: number; mimeType: string; fileUrl: string } | null {
+function getFileAttachment(item: FeedItem): { fileName: string; mimeType: string; fileUrl: string; fileSize?: number } | null {
   const f = item.metadata?.fileAttachment;
-  if (f && typeof f === "object" && "fileUrl" in f) return f as { fileName: string; fileSize: number; mimeType: string; fileUrl: string };
+  if (f && typeof f === "object" && "fileUrl" in f) return f as { fileName: string; mimeType: string; fileUrl: string; fileSize?: number };
   return null;
 }
 
@@ -534,9 +534,11 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
             <div style={{ fontSize: 13, fontWeight: 600, color: "#202124", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {fileAttachment.fileName}
             </div>
-            <div style={{ fontSize: 11, color: "#5f6368" }}>
-              {formatFileSize(fileAttachment.fileSize)}
-            </div>
+            {typeof fileAttachment.fileSize === "number" && (
+              <div style={{ fontSize: 11, color: "#5f6368" }}>
+                {formatFileSize(fileAttachment.fileSize)}
+              </div>
+            )}
           </div>
           <span style={{ fontSize: 18, color: "#1a73e8" }}>⬇</span>
         </a>

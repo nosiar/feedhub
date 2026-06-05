@@ -20,8 +20,17 @@ interface KakaocliMessage {
   timestamp: string;
 }
 
+interface FileAttachment {
+  fileName: string;
+  mimeType: string;
+  fileUrl: string;
+  fileSize?: number;
+}
+
 interface ParsedAttachment {
   imageUrls: string[];
+  videoUrl?: string;
+  fileAttachment?: FileAttachment;
   linkPreview?: { title: string; description: string; imageUrl: string; url: string };
 }
 
@@ -29,11 +38,48 @@ const FETCH_CONCURRENCY = 4;
 const ITEM_CONCURRENCY = 4;
 const INTERNAL_PREFIX = "/api/kakao/image/";
 
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp"]);
+const VIDEO_EXTS = new Set(["mp4", "mov", "m4v", "webm"]);
+
+const MIME_BY_EXT: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  zip: "application/zip",
+  txt: "text/plain",
+  csv: "text/csv",
+};
+
 function isHttpUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value);
 }
 
-function parseAttachment(attachment?: string): ParsedAttachment {
+function extOf(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const dot = path.lastIndexOf(".");
+    if (dot < 0) return "";
+    return path.slice(dot + 1).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function fileNameFromUrl(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const slash = path.lastIndexOf("/");
+    return slash < 0 ? path : path.slice(slash + 1);
+  } catch {
+    return "file";
+  }
+}
+
+function parseAttachment(attachment?: string, bodyText?: string): ParsedAttachment {
   if (!attachment) return { imageUrls: [] };
   try {
     const data = JSON.parse(attachment);
@@ -46,10 +92,37 @@ function parseAttachment(attachment?: string): ParsedAttachment {
       const url = scrap.canonical_url ?? scrap.requested_url ?? "";
       if (title && url) linkPreview = { title, description, imageUrl, url };
     }
-    let imageUrls: string[] = [];
-    if (Array.isArray(data.imageUrls)) imageUrls = data.imageUrls.filter(isHttpUrl);
-    else if (isHttpUrl(data.url) && !scrap) imageUrls = [data.url];
-    return { imageUrls, linkPreview };
+    let urls: string[] = [];
+    if (Array.isArray(data.imageUrls)) urls = data.imageUrls.filter(isHttpUrl);
+    else if (isHttpUrl(data.url) && !scrap) urls = [data.url];
+
+    const imageUrls: string[] = [];
+    let videoUrl: string | undefined;
+    let fileAttachment: FileAttachment | undefined;
+    for (const url of urls) {
+      const ext = extOf(url);
+      if (IMAGE_EXTS.has(ext) || ext === "") {
+        imageUrls.push(url);
+      } else if (VIDEO_EXTS.has(ext)) {
+        videoUrl ??= url;
+      } else {
+        if (!fileAttachment) {
+          const guessedName = fileNameFromUrl(url);
+          fileAttachment = {
+            fileName: bodyText?.trim() || guessedName,
+            mimeType: MIME_BY_EXT[ext] ?? "application/octet-stream",
+            fileUrl: url,
+            ...(typeof data.size === "number" ? { fileSize: data.size } : {}),
+          };
+        }
+      }
+    }
+    return {
+      imageUrls,
+      ...(videoUrl ? { videoUrl } : {}),
+      ...(fileAttachment ? { fileAttachment } : {}),
+      ...(linkPreview ? { linkPreview } : {}),
+    };
   } catch {
     return { imageUrls: [] };
   }
@@ -159,7 +232,7 @@ export class KakaotalkConnector implements Connector {
               chatId: msg.chat_id,
               senderId: msg.sender_id,
               isFromMe: msg.is_from_me,
-              ...parseAttachment(msg.attachment),
+              ...parseAttachment(msg.attachment, msg.text),
             },
           } satisfies FeedItem,
           msgId: msg.id,

@@ -143,6 +143,62 @@ describe("KakaotalkConnector image rewrite", () => {
     expect(urls).toEqual(["https://k/dead.jpg"]);
   });
 
+  it("routes mp4 url to videoUrl and leaves imageUrls empty", async () => {
+    const att = JSON.stringify({
+      imageUrls: ["https://talk.kakaocdn.net/dna/x/y/talkv_hevc.mp4?credential=z&expires=1&signature=s"],
+    });
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        const callback = cb as (e: Error | null, s: string) => void;
+        callback(null, JSON.stringify([
+          { id: "40", chat_id: "c1", sender_id: "s", sender: "S",
+            text: "동영상", attachment: att, type: "video",
+            is_from_me: false, timestamp: "2026-04-20T01:00:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const c = new (await import("../../src/connectors/kakaotalk.js")).KakaotalkConnector(
+      "kakaocli", [{ id: "c1", name: "C1" }],
+    );
+    const { items } = await c.sync(null);
+    const meta = items[0].metadata as { imageUrls: string[]; videoUrl?: string };
+    expect(meta.imageUrls).toEqual([]);
+    expect(meta.videoUrl).toMatch(/^https:\/\/talk\.kakaocdn\.net\/.+\.mp4\?/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("routes pdf url to fileAttachment using message text as fileName", async () => {
+    const att = JSON.stringify({
+      imageUrls: ["https://talk.kakaocdn.net/dna/x/y/f_abc.pdf?credential=z&expires=1&signature=s"],
+    });
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        const callback = cb as (e: Error | null, s: string) => void;
+        callback(null, JSON.stringify([
+          { id: "41", chat_id: "c1", sender_id: "s", sender: "S",
+            text: "공고문.pdf", attachment: att, type: "file",
+            is_from_me: false, timestamp: "2026-04-20T01:00:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const c = new (await import("../../src/connectors/kakaotalk.js")).KakaotalkConnector(
+      "kakaocli", [{ id: "c1", name: "C1" }],
+    );
+    const { items } = await c.sync(null);
+    const meta = items[0].metadata as {
+      imageUrls: string[];
+      fileAttachment?: { fileName: string; mimeType: string; fileUrl: string; fileSize?: number };
+    };
+    expect(meta.imageUrls).toEqual([]);
+    expect(meta.fileAttachment?.fileName).toBe("공고문.pdf");
+    expect(meta.fileAttachment?.mimeType).toBe("application/pdf");
+    expect(meta.fileAttachment?.fileUrl).toMatch(/\.pdf\?/);
+    expect(meta.fileAttachment?.fileSize).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("drops non-http attachment urls (e.g. kakao emoticon paths) without attempting fetch", async () => {
     const att = JSON.stringify({
       url: "1110001.emot_027.gif",
