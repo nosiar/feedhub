@@ -166,7 +166,8 @@ export async function fetchTelegramChats(): Promise<{
 export interface PollResult {
   question: string;
   closed: boolean;
-  answers: { text: string; voters: number }[];
+  quiz?: boolean;
+  answers: { text: string; voters: number; chosen?: boolean; correct?: boolean }[];
   totalVoters: number;
 }
 

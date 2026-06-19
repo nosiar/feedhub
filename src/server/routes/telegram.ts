@@ -271,13 +271,35 @@ export function telegramRoutes(app: FastifyInstance): void {
         return reply.status(404).send({ error: "Poll not found" });
       }
 
-      const { poll, results } = msg.media;
+      const { poll } = msg.media;
+      let results = msg.media.results;
+      // When results are `min`, the per-user chosen/correct flags are stripped.
+      // GetPollResults returns the personalized results for the logged-in account.
+      if (results.min) {
+        try {
+          const updates = await client.invoke(
+            new Api.messages.GetPollResults({ peer: chatId, msgId: parseInt(msgId, 10) })
+          );
+          if ("updates" in updates) {
+            const upd = updates.updates.find(
+              (u): u is Api.UpdateMessagePoll => u instanceof Api.UpdateMessagePoll
+            );
+            if (upd?.results) results = upd.results;
+          }
+        } catch {
+          // Keep the min results; aggregate counts are still accurate.
+        }
+      }
+
       return {
         question: poll.question.text ?? "",
         closed: poll.closed ?? false,
+        quiz: poll.quiz ?? false,
         answers: poll.answers.map((a, i) => ({
           text: a.text.text ?? "",
           voters: results.results?.[i]?.voters ?? 0,
+          chosen: results.results?.[i]?.chosen ?? false,
+          correct: results.results?.[i]?.correct ?? false,
         })),
         totalVoters: results.totalVoters ?? 0,
       };

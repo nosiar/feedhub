@@ -292,9 +292,11 @@ function PollCard({ pollUrl, poll, expanded }: {
     fetchPollResults(pollUrl).then(setResults).finally(() => setLoading(false));
   }, [expanded, fetched, pollUrl]);
 
-  const answers = results?.answers ?? poll.answers.map((text) => ({ text, voters: 0 }));
+  const answers = results?.answers ?? poll.answers.map((text) => ({ text, voters: 0, chosen: false, correct: false }));
   const totalVoters = results?.totalVoters ?? 0;
   const hasResults = totalVoters > 0;
+  const isQuiz = results?.quiz ?? false;
+  const voted = answers.some((a) => a.chosen);
 
   return (
     <div
@@ -302,27 +304,40 @@ function PollCard({ pollUrl, poll, expanded }: {
       style={{ marginTop: 8, padding: 12, background: "#f8f9fa", borderRadius: 10, border: "1px solid #e0e0e0", maxWidth: 360 }}
     >
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-        📊 {results?.question ?? poll.question}
+        {isQuiz ? "❓" : "📊"} {results?.question ?? poll.question}
       </div>
       {answers.map((a, i) => {
         const pct = hasResults ? Math.round((a.voters / totalVoters) * 100) : 0;
+        // Telegram-style: highlight the option you voted for; for quizzes,
+        // green if correct, red if your pick was wrong.
+        const barColor = a.chosen
+          ? isQuiz ? (a.correct ? "#d6f0d8" : "#fadbd9") : "#c2dbfe"
+          : isQuiz && a.correct ? "#e6f4ea" : "#e8f0fe";
+        const marker = a.chosen
+          ? isQuiz ? (a.correct ? "✓" : "✗") : "✓"
+          : isQuiz && a.correct ? "✓" : "";
+        const markerColor = a.chosen && isQuiz && !a.correct ? "#d93025" : "#1a73e8";
         return (
           <div key={i} style={{ marginBottom: 4, position: "relative" }}>
             {hasResults && (
               <div style={{
                 position: "absolute", top: 0, left: 0, height: "100%",
-                width: `${pct}%`, background: "#e8f0fe", borderRadius: 6, transition: "width 0.3s",
+                width: `${pct}%`, background: barColor, borderRadius: 6, transition: "width 0.3s",
               }} />
             )}
-            <div style={{ position: "relative", padding: "6px 10px", fontSize: 13, display: "flex", justifyContent: "space-between" }}>
-              <span>{a.text}</span>
-              {hasResults && <span style={{ color: "#5f6368", fontSize: 12 }}>{pct}%</span>}
+            <div style={{ position: "relative", padding: "6px 10px", fontSize: 13, display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ minWidth: 0, fontWeight: a.chosen ? 600 : 400 }}>
+                {marker && <span style={{ color: markerColor, marginRight: 5, fontWeight: 700 }}>{marker}</span>}
+                {a.text}
+              </span>
+              {hasResults && <span style={{ color: "#5f6368", fontSize: 12, flexShrink: 0 }}>{pct}%</span>}
             </div>
           </div>
         );
       })}
       <div style={{ fontSize: 11, color: "#999", marginTop: 6 }}>
         {loading ? "결과 불러오는 중..." : hasResults ? `👥 ${totalVoters}명 투표` : "투표 결과 없음"}
+        {voted && " · 내가 투표함"}
         {results?.closed && " · 마감됨"}
       </div>
     </div>
