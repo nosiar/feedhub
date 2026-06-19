@@ -7,6 +7,9 @@ const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
 
 const EMAIL_SOURCES = new Set(["gmail", "naver"]);
 
+// --- Plain-text sources that expand to reveal the full (clamped) body ---
+const TEXT_SOURCES = new Set(["rss"]);
+
 function Lightbox({
   urls,
   index,
@@ -618,9 +621,10 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
   const icon = SOURCE_ICONS[item.source] ?? "\u{1F4CB}";
   const isChat = CHAT_SOURCES.has(item.source);
   const isEmail = EMAIL_SOURCES.has(item.source);
-  const isExpandable = isChat || isEmail;
+  const isText = TEXT_SOURCES.has(item.source);
+  const isExpandable = isChat || isEmail || isText;
 
-  const expanded = expandedProp ?? (isChat && !!defaultExpanded);
+  const expanded = expandedProp ?? ((isChat || isText) && !!defaultExpanded);
   const [emailBody, setEmailBody] = useState<string | null>(null);
   const [emailLoading, setEmailLoading] = useState(false);
 
@@ -824,7 +828,7 @@ export function FeedCard({ item, defaultExpanded, onDelete, onTogglePin, focused
         }
         return (
           <div style={{ fontSize: 14, color: "#3c4043" }}>
-            <div style={{
+            <div style={expanded && isText ? { whiteSpace: "pre-wrap" } : {
               overflow: "hidden", textOverflow: "ellipsis",
               display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
             }}>

@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
 import type { Connector, FeedItem } from "./types.js";
+import { isNaverBlogUrl, fetchNaverBlogBody } from "./naver-blog.js";
 
 export class RssConnector implements Connector {
   name = "rss" as const;
@@ -21,17 +22,31 @@ export class RssConnector implements Connector {
         for (const entry of feed.items) {
           const timestamp = new Date(entry.isoDate ?? entry.pubDate ?? Date.now());
           if (cursorDate && timestamp <= cursorDate) continue;
+          // Prefer the full <content:encoded> body (HTML stripped by rss-parser as
+          // `content:encodedSnippet`) over the often-truncated <description> snippet.
+          const encodedSnippet = (entry as Record<string, unknown>)["content:encodedSnippet"];
+          const body = typeof encodedSnippet === "string" && encodedSnippet
+            ? encodedSnippet
+            : entry.contentSnippet ?? "";
           items.push({
             id: entry.guid ?? entry.link ?? `${url}:${timestamp.toISOString()}`,
             source: "rss",
             title: entry.title ?? "(no title)",
-            body: entry.contentSnippet ?? entry.content ?? "",
+            body,
             author: feed.title ?? entry.creator ?? "Unknown",
             url: entry.link,
             timestamp,
             metadata: { feedUrl: url, feedTitle: feed.title },
           });
         }
+        // Naver blog feeds truncate <description>; scrape the full post body.
+        await Promise.all(
+          items.map(async (item) => {
+            if (!isNaverBlogUrl(item.url)) return;
+            const full = await fetchNaverBlogBody(item.url!);
+            if (full) item.body = full;
+          })
+        );
         return items;
       })
     );

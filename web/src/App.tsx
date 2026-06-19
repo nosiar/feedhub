@@ -22,7 +22,9 @@ export function App() {
   const [toast, setToast] = useState<{ item: FeedItem } | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasChat = items.some((i) => i.source === "kakaotalk" || i.source === "telegram");
+  const hasExpandable = items.some(
+    (i) => i.source === "kakaotalk" || i.source === "telegram" || i.source === "rss"
+  );
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -287,7 +289,7 @@ export function App() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <SourceFilter current={source} onChange={setSource} />
         <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-          {hasChat && (
+          {hasExpandable && (
             <button
               onClick={() => setExpandAll(!expandAll)}
               style={{

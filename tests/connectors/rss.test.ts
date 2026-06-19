@@ -18,6 +18,7 @@ vi.mock("rss-parser", () => {
             guid: "post-2",
             title: "Second Post",
             contentSnippet: "Goodbye world",
+            "content:encodedSnippet": "Goodbye world, this is the full article body",
             creator: "Author",
             link: "https://example.com/post-2",
             isoDate: "2026-04-02T10:00:00Z",
@@ -43,6 +44,13 @@ describe("RssConnector", () => {
       url: "https://example.com/post-1",
     });
     expect(result.newCursor).toBeDefined();
+  });
+
+  it("prefers the full content:encoded snippet over the description snippet", async () => {
+    const connector = new RssConnector(["https://example.com/feed"]);
+    const result = await connector.sync(null);
+    const second = result.items.find((i) => i.title === "Second Post");
+    expect(second?.body).toBe("Goodbye world, this is the full article body");
   });
 
   it("filters items after cursor timestamp", async () => {
