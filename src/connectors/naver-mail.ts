@@ -18,7 +18,7 @@ export class NaverMailConnector implements Connector {
   }
 
   private createClient(): ImapFlow {
-    return new ImapFlow({
+    const client = new ImapFlow({
       host: "imap.naver.com",
       port: 993,
       secure: true,
@@ -28,6 +28,14 @@ export class NaverMailConnector implements Connector {
       },
       logger: false,
     });
+    // ImapFlow is an EventEmitter: an unhandled 'error' event (e.g. socket
+    // ETIMEDOUT when the network drops an idle connection) is re-thrown by
+    // Node and crashes the process. Awaited operations reject on their own;
+    // this listener just prevents the crash.
+    client.on("error", (err: Error) => {
+      console.warn(`[naver-mail] imap error: ${err.message}`);
+    });
+    return client;
   }
 
   async sync(
