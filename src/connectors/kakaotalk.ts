@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { fetchAndStoreImage } from "./kakao-image-fetcher.js";
 import { listKakaoImagesByFeedItem } from "../db/kakao-images-repo.js";
-import type { Connector, FeedItem } from "./types.js";
+import type { Connector, FeedItem, FileAttachment } from "./types.js";
 
 export interface KakaoChat {
   id: string;
@@ -20,17 +20,10 @@ interface KakaocliMessage {
   timestamp: string;
 }
 
-interface FileAttachment {
-  fileName: string;
-  mimeType: string;
-  fileUrl: string;
-  fileSize?: number;
-}
-
 interface ParsedAttachment {
   imageUrls: string[];
   videoUrl?: string;
-  fileAttachment?: FileAttachment;
+  fileAttachments?: FileAttachment[];
   linkPreview?: { title: string; description: string; imageUrl: string; url: string };
 }
 
@@ -98,7 +91,7 @@ function parseAttachment(attachment?: string, bodyText?: string): ParsedAttachme
 
     const imageUrls: string[] = [];
     let videoUrl: string | undefined;
-    let fileAttachment: FileAttachment | undefined;
+    const fileUrls: string[] = [];
     for (const url of urls) {
       const ext = extOf(url);
       if (IMAGE_EXTS.has(ext) || ext === "") {
@@ -106,21 +99,28 @@ function parseAttachment(attachment?: string, bodyText?: string): ParsedAttachme
       } else if (VIDEO_EXTS.has(ext)) {
         videoUrl ??= url;
       } else {
-        if (!fileAttachment) {
-          const guessedName = fileNameFromUrl(url);
-          fileAttachment = {
-            fileName: bodyText?.trim() || guessedName,
-            mimeType: MIME_BY_EXT[ext] ?? "application/octet-stream",
-            fileUrl: url,
-            ...(typeof data.size === "number" ? { fileSize: data.size } : {}),
-          };
-        }
+        fileUrls.push(url);
       }
     }
+
+    // A lone file is usually titled by the message text, and the message-level
+    // size belongs to it. Neither can be split across several files, so those
+    // only apply when there is exactly one.
+    const single = fileUrls.length === 1;
+    const fileAttachments: FileAttachment[] = fileUrls.map((url) => {
+      const guessedName = fileNameFromUrl(url);
+      return {
+        fileName: single ? bodyText?.trim() || guessedName : guessedName,
+        mimeType: MIME_BY_EXT[extOf(url)] ?? "application/octet-stream",
+        fileUrl: url,
+        ...(single && typeof data.size === "number" ? { fileSize: data.size } : {}),
+      };
+    });
+
     return {
       imageUrls,
       ...(videoUrl ? { videoUrl } : {}),
-      ...(fileAttachment ? { fileAttachment } : {}),
+      ...(fileAttachments.length > 0 ? { fileAttachments } : {}),
       ...(linkPreview ? { linkPreview } : {}),
     };
   } catch {

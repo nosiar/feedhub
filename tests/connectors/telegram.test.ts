@@ -32,6 +32,28 @@ function albumMessage(id: number, groupedId: bigint, text = "") {
   };
 }
 
+function documentMessage(id: number, groupedId: bigint, fileName: string, size: number, text = "") {
+  const document = new Api.Document({
+    id: BigInt(id),
+    accessHash: 0n,
+    fileReference: Buffer.from([]),
+    date: 0,
+    mimeType: "application/pdf",
+    size: BigInt(size),
+    dcId: 1,
+    attributes: [new Api.DocumentAttributeFilename({ fileName })],
+  });
+  return {
+    id,
+    groupedId,
+    text,
+    date: 1757571769,
+    media: new Api.MessageMediaDocument({ document }),
+    sender: { title: "채널" },
+    replies: undefined,
+  };
+}
+
 function connector() {
   return new TelegramConnector({
     apiId: 1,
@@ -101,6 +123,32 @@ describe("TelegramConnector album grouping", () => {
     expect(items[0].metadata.imageUrls).toHaveLength(14);
     // One block back reaches 101..110, a second proves nothing older belongs.
     expect(mockGetMessages.mock.calls.filter((c) => (c[1] as Record<string, unknown>)?.ids)).toHaveLength(2);
+  });
+
+  it("keeps every document of an album, not just the first", async () => {
+    mockGetMessages.mockResolvedValue([
+      documentMessage(1371, 11n, "운영기준.pdf", 964011),
+      documentMessage(1372, 11n, "시행규칙.pdf", 62416, "자료 공유"),
+    ]);
+
+    const { items } = await connector().sync(null);
+
+    expect(items).toHaveLength(1);
+    expect(items[0].metadata.fileAttachments).toEqual([
+      {
+        fileName: "운영기준.pdf",
+        fileSize: 964011,
+        mimeType: "application/pdf",
+        fileUrl: "/api/telegram/file/-100123/1371",
+      },
+      {
+        fileName: "시행규칙.pdf",
+        fileSize: 62416,
+        mimeType: "application/pdf",
+        fileUrl: "/api/telegram/file/-100123/1372",
+      },
+    ]);
+    expect(items[0].metadata.fileAttachment).toBeUndefined();
   });
 
   it("does not refetch when the oldest fetched message is not part of an album", async () => {

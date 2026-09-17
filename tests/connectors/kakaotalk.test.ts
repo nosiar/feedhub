@@ -168,7 +168,7 @@ describe("KakaotalkConnector image rewrite", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("routes pdf url to fileAttachment using message text as fileName", async () => {
+  it("routes pdf url to fileAttachments using message text as fileName", async () => {
     const att = JSON.stringify({
       imageUrls: ["https://talk.kakaocdn.net/dna/x/y/f_abc.pdf?credential=z&expires=1&signature=s"],
     });
@@ -189,13 +189,46 @@ describe("KakaotalkConnector image rewrite", () => {
     const { items } = await c.sync(null);
     const meta = items[0].metadata as {
       imageUrls: string[];
-      fileAttachment?: { fileName: string; mimeType: string; fileUrl: string; fileSize?: number };
+      fileAttachments?: { fileName: string; mimeType: string; fileUrl: string; fileSize?: number }[];
     };
     expect(meta.imageUrls).toEqual([]);
-    expect(meta.fileAttachment?.fileName).toBe("공고문.pdf");
-    expect(meta.fileAttachment?.mimeType).toBe("application/pdf");
-    expect(meta.fileAttachment?.fileUrl).toMatch(/\.pdf\?/);
-    expect(meta.fileAttachment?.fileSize).toBeUndefined();
+    expect(meta.fileAttachments).toHaveLength(1);
+    expect(meta.fileAttachments?.[0].fileName).toBe("공고문.pdf");
+    expect(meta.fileAttachments?.[0].mimeType).toBe("application/pdf");
+    expect(meta.fileAttachments?.[0].fileUrl).toMatch(/\.pdf\?/);
+    expect(meta.fileAttachments?.[0].fileSize).toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps every non-media url as its own attachment", async () => {
+    const att = JSON.stringify({
+      imageUrls: [
+        "https://talk.kakaocdn.net/dna/x/y/f_one.pdf?credential=z&expires=1&signature=s",
+        "https://talk.kakaocdn.net/dna/x/y/f_two.xlsx?credential=z&expires=1&signature=s",
+      ],
+    });
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        const callback = cb as (e: Error | null, s: string) => void;
+        callback(null, JSON.stringify([
+          { id: "42", chat_id: "c1", sender_id: "s", sender: "S",
+            text: "", attachment: att, type: "file",
+            is_from_me: false, timestamp: "2026-04-20T02:00:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const c = new (await import("../../src/connectors/kakaotalk.js")).KakaotalkConnector(
+      "kakaocli", [{ id: "c1", name: "C1" }],
+    );
+    const { items } = await c.sync(null);
+    const meta = items[0].metadata as {
+      fileAttachments?: { fileName: string; mimeType: string }[];
+    };
+    expect(meta.fileAttachments?.map((f) => f.mimeType)).toEqual([
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

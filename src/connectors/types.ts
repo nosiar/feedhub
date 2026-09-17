@@ -1,5 +1,12 @@
 export type SourceType = "gmail" | "kakaotalk" | "slack" | "rss" | "telegram" | "youtube" | "naver";
 
+export interface FileAttachment {
+  fileName: string;
+  mimeType: string;
+  fileUrl: string;
+  fileSize?: number;
+}
+
 export interface FeedItem {
   id: string;
   source: SourceType;

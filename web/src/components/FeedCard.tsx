@@ -242,10 +242,18 @@ function getReplies(item: FeedItem): { replyCount: number; repliesUrl: string } 
   return null;
 }
 
-function getFileAttachment(item: FeedItem): { fileName: string; mimeType: string; fileUrl: string; fileSize?: number } | null {
-  const f = item.metadata?.fileAttachment;
-  if (f && typeof f === "object" && "fileUrl" in f) return f as { fileName: string; mimeType: string; fileUrl: string; fileSize?: number };
-  return null;
+type Attachment = { fileName: string; mimeType: string; fileUrl: string; fileSize?: number };
+
+function isAttachment(f: unknown): f is Attachment {
+  return !!f && typeof f === "object" && "fileUrl" in f;
+}
+
+function getFileAttachments(item: FeedItem): Attachment[] {
+  const list = item.metadata?.fileAttachments;
+  if (Array.isArray(list)) return list.filter(isAttachment);
+  // Items stored before attachments went plural still carry a single one.
+  const one = item.metadata?.fileAttachment;
+  return isAttachment(one) ? [one] : [];
 }
 
 function formatFileSize(bytes: number): string {
@@ -483,7 +491,7 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
   const videoUrl = getVideoUrl(item);
   const videoPosterUrl = getVideoPosterUrl(item);
   const poll = getPoll(item);
-  const fileAttachment = getFileAttachment(item);
+  const fileAttachments = getFileAttachments(item);
   const repliesInfo = getReplies(item);
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
   const isTelegram = item.source === "telegram";
@@ -535,9 +543,10 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
           />
         </div>
       )}
-      {fileAttachment && (
+      {fileAttachments.map((f) => (
         <a
-          href={fileAttachment.fileUrl}
+          key={f.fileUrl}
+          href={f.fileUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e: MouseEvent) => e.stopPropagation()}
@@ -550,17 +559,17 @@ function MessageBody({ item, compact }: { item: FeedItem; compact?: boolean }) {
           <span style={{ fontSize: 24 }}>📎</span>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#202124", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {fileAttachment.fileName}
+              {f.fileName}
             </div>
-            {typeof fileAttachment.fileSize === "number" && (
+            {typeof f.fileSize === "number" && (
               <div style={{ fontSize: 11, color: "#5f6368" }}>
-                {formatFileSize(fileAttachment.fileSize)}
+                {formatFileSize(f.fileSize)}
               </div>
             )}
           </div>
           <span style={{ fontSize: 18, color: "#1a73e8" }}>⬇</span>
         </a>
-      )}
+      ))}
       {poll && <PollCard pollUrl={poll.pollUrl} poll={poll} expanded={!compact} />}
       {allUrls.length > 0 && <ImageGallery urls={allUrls} />}
       {repliesInfo && repliesInfo.replyCount > 0 && (
@@ -586,7 +595,7 @@ function CompactMedia({ item }: { item: FeedItem }) {
   const photoUrl = getPhotoUrl(item);
   const videoUrl = getVideoUrl(item);
   const poll = getPoll(item);
-  const fileAttachment = getFileAttachment(item);
+  const fileAttachments = getFileAttachments(item);
   const repliesInfo = getReplies(item);
   const unsupported = item.metadata?.unsupportedMedia;
   const allUrls = [...images, ...(photoUrl ? [photoUrl] : [])];
@@ -598,9 +607,10 @@ function CompactMedia({ item }: { item: FeedItem }) {
           🎬 영상
         </span>
       )}
-      {fileAttachment && (
+      {fileAttachments.length > 0 && (
         <span style={{ display: "inline-block", marginTop: 4, marginLeft: videoUrl ? 4 : 0, padding: "2px 8px", background: "#e8f5e9", borderRadius: 4, fontSize: 11, color: "#2e7d32" }}>
-          📎 {fileAttachment.fileName}
+          📎 {fileAttachments[0].fileName}
+          {fileAttachments.length > 1 && ` 외 ${fileAttachments.length - 1}개`}
         </span>
       )}
       {poll && (

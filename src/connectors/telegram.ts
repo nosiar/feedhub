@@ -1,7 +1,7 @@
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions/index.js";
 import { Api } from "telegram/tl/index.js";
-import type { Connector, FeedItem } from "./types.js";
+import type { Connector, FeedItem, FileAttachment } from "./types.js";
 
 interface TelegramConfig {
   apiId: number;
@@ -182,32 +182,28 @@ export class TelegramConnector implements Connector {
             .map((m) => `/api/telegram/photo/${chat.id}/${m.id}`);
           const videoMember = members.find(isVideo);
 
-          // Non-album media (file/poll/link/replies) comes from a member that has it.
-          const fileMsg = members.find(
-            (m) =>
-              m.media instanceof Api.MessageMediaDocument
-              && m.media.document instanceof Api.Document
-              && !isVideo(m)
-          );
-          let fileAttachment: { fileName: string; fileSize: number; mimeType: string; fileUrl: string } | undefined;
-          if (
-            fileMsg
-            && fileMsg.media instanceof Api.MessageMediaDocument
-            && fileMsg.media.document instanceof Api.Document
-          ) {
-            const doc = fileMsg.media.document;
+          // Non-album media (poll/link/replies) comes from a member that has it.
+          // Documents are per-member, so an album can carry several at once.
+          const fileAttachments: FileAttachment[] = members.flatMap((m) => {
+            if (
+              !(m.media instanceof Api.MessageMediaDocument)
+              || !(m.media.document instanceof Api.Document)
+              || isVideo(m)
+            ) {
+              return [];
+            }
+            const doc = m.media.document;
             const fileNameAttr = doc.attributes?.find(
               (a): a is Api.DocumentAttributeFilename => a instanceof Api.DocumentAttributeFilename
             );
-            if (fileNameAttr) {
-              fileAttachment = {
-                fileName: fileNameAttr.fileName,
-                fileSize: Number(doc.size),
-                mimeType: doc.mimeType ?? "application/octet-stream",
-                fileUrl: `/api/telegram/file/${chat.id}/${fileMsg.id}`,
-              };
-            }
-          }
+            if (!fileNameAttr) return [];
+            return [{
+              fileName: fileNameAttr.fileName,
+              fileSize: Number(doc.size),
+              mimeType: doc.mimeType ?? "application/octet-stream",
+              fileUrl: `/api/telegram/file/${chat.id}/${m.id}`,
+            }];
+          });
 
           const pollMsg = members.find((m) => m.media instanceof Api.MessageMediaPoll);
           let poll: { question: string; answers: string[] } | undefined;
@@ -246,7 +242,7 @@ export class TelegramConnector implements Connector {
               messageId: msgId,
               imageUrls,
               ...(videoMember ? { videoUrl: `/api/telegram/video/${chat.id}/${videoMember.id}`, videoPosterUrl: `/api/telegram/video-thumb/${chat.id}/${videoMember.id}` } : {}),
-              ...(fileAttachment ? { fileAttachment } : {}),
+              ...(fileAttachments.length > 0 ? { fileAttachments } : {}),
               ...(poll && pollMsg ? { poll, pollUrl: `/api/telegram/poll/${chat.id}/${pollMsg.id}` } : {}),
               ...(linkPreview ? { linkPreview } : {}),
               ...(repliesMsg?.replies ? {
