@@ -95,6 +95,51 @@ export class TelegramConnector implements Connector {
           return true;
         });
 
+        // An album is a run of consecutive messages sharing a groupedId, so the
+        // fixed-size refresh window can slice one in half. Grouping the visible
+        // tail alone would mint a feed item keyed on the wrong message id — a
+        // permanent duplicate holding a subset of the album — so walk back by id
+        // until the album's first member is in hand.
+        const LOOKBACK_STEP = 10;
+        const oldest = msgs.reduce<(typeof msgs)[number] | undefined>(
+          (a, b) => (a && a.id <= b.id ? a : b),
+          undefined
+        );
+        if (oldest?.groupedId) {
+          const albumId = oldest.groupedId.toString();
+          try {
+            let firstKnown = oldest.id;
+            while (firstKnown > 1) {
+              const from = Math.max(1, firstKnown - LOOKBACK_STEP);
+              const ids: number[] = [];
+              for (let id = from; id < firstKnown; id++) ids.push(id);
+
+              const earlier = await client.getMessages(chat.id, { ids });
+              const members = earlier.filter(
+                (m) => m?.groupedId?.toString() === albumId
+              );
+              for (const m of members) {
+                if (seen.has(m.id)) continue;
+                seen.add(m.id);
+                msgs.push(m);
+              }
+
+              // Keep walking only while the whole block turned out to be album
+              // members; anything else in it means the album's first message is
+              // already in hand.
+              if (members.length < ids.length) break;
+              firstKnown = from;
+            }
+          } catch {
+            // Can't prove the album is whole; drop its visible tail rather than
+            // publish a partial copy. A complete version was ingested earlier,
+            // while this album was still inside the window.
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (msgs[i].groupedId?.toString() === albumId) msgs.splice(i, 1);
+            }
+          }
+        }
+
         const isVideo = (m: (typeof msgs)[number]): boolean =>
           m.media instanceof Api.MessageMediaDocument
           && m.media.document instanceof Api.Document
