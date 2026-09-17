@@ -9,6 +9,11 @@ import { getDb, closeDb } from "../src/db/client.js";
  * album could land in the DB several times, each copy holding a shorter tail.
  * Those copies are unreachable by the connector now — nothing will ever update
  * or replace them — so they have to be deleted once.
+ *
+ * A copy can hold as little as one photo, when the window left only the album's
+ * last member visible, so single-image items have to be examined too. A message
+ * belongs to exactly one album, so an item whose photos all appear in a longer
+ * item is always a copy of it.
  */
 
 const DRY_RUN = !process.argv.includes("--apply");
@@ -32,7 +37,7 @@ async function main(): Promise<void> {
   const db = await getDb();
   const docs = await db
     .collection("feed_items")
-    .find({ source: "telegram", "metadata.imageUrls.1": { $exists: true } })
+    .find({ source: "telegram", "metadata.imageUrls.0": { $exists: true } })
     .toArray();
 
   const byChat = new Map<string, AlbumItem[]>();
