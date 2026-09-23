@@ -23,6 +23,47 @@ async function getClient(): Promise<TelegramClient> {
   return sharedClient;
 }
 
+// `min` results have the per-user chosen/correct flags stripped; GetPollResults
+// returns the personalized view for the logged-in account.
+async function personalizedResults(
+  client: TelegramClient,
+  chatId: string,
+  msgId: number,
+  media: Api.MessageMediaPoll
+): Promise<Api.PollResults> {
+  if (!media.results.min) return media.results;
+  try {
+    const updates = await client.invoke(
+      new Api.messages.GetPollResults({ peer: chatId, msgId })
+    );
+    if ("updates" in updates) {
+      const upd = updates.updates.find(
+        (u): u is Api.UpdateMessagePoll => u instanceof Api.UpdateMessagePoll
+      );
+      if (upd?.results) return upd.results;
+    }
+  } catch {
+    // Keep the min results; aggregate counts are still accurate.
+  }
+  return media.results;
+}
+
+function pollPayload(poll: Api.Poll, results: Api.PollResults) {
+  return {
+    question: poll.question.text ?? "",
+    closed: poll.closed ?? false,
+    quiz: poll.quiz ?? false,
+    multipleChoice: poll.multipleChoice ?? false,
+    answers: poll.answers.map((a, i) => ({
+      text: a.text.text ?? "",
+      voters: results.results?.[i]?.voters ?? 0,
+      chosen: results.results?.[i]?.chosen ?? false,
+      correct: results.results?.[i]?.correct ?? false,
+    })),
+    totalVoters: results.totalVoters ?? 0,
+  };
+}
+
 export function telegramRoutes(app: FastifyInstance): void {
   app.get("/api/telegram/chats", async (_req, reply) => {
     if (!config.telegram.session) {
@@ -271,38 +312,78 @@ export function telegramRoutes(app: FastifyInstance): void {
         return reply.status(404).send({ error: "Poll not found" });
       }
 
-      const { poll } = msg.media;
-      let results = msg.media.results;
-      // When results are `min`, the per-user chosen/correct flags are stripped.
-      // GetPollResults returns the personalized results for the logged-in account.
-      if (results.min) {
-        try {
-          const updates = await client.invoke(
-            new Api.messages.GetPollResults({ peer: chatId, msgId: parseInt(msgId, 10) })
-          );
-          if ("updates" in updates) {
-            const upd = updates.updates.find(
-              (u): u is Api.UpdateMessagePoll => u instanceof Api.UpdateMessagePoll
-            );
-            if (upd?.results) results = upd.results;
-          }
-        } catch {
-          // Keep the min results; aggregate counts are still accurate.
-        }
+      const results = await personalizedResults(
+        client,
+        chatId,
+        parseInt(msgId, 10),
+        msg.media
+      );
+      return pollPayload(msg.media.poll, results);
+    }
+  );
+
+  app.post<{ Params: { chatId: string; msgId: string }; Body: { options?: number[] } }>(
+    "/api/telegram/poll/:chatId/:msgId/vote",
+    async (req, reply) => {
+      if (!config.telegram.session) {
+        return reply.status(400).send({ error: "Telegram not connected" });
       }
 
-      return {
-        question: poll.question.text ?? "",
-        closed: poll.closed ?? false,
-        quiz: poll.quiz ?? false,
-        answers: poll.answers.map((a, i) => ({
-          text: a.text.text ?? "",
-          voters: results.results?.[i]?.voters ?? 0,
-          chosen: results.results?.[i]?.chosen ?? false,
-          correct: results.results?.[i]?.correct ?? false,
-        })),
-        totalVoters: results.totalVoters ?? 0,
-      };
+      const { chatId } = req.params;
+      const msgId = parseInt(req.params.msgId, 10);
+      const chosen = req.body?.options ?? [];
+
+      const client = await getClient();
+      const msgs = await client.getMessages(chatId, { ids: [msgId] });
+      const msg = msgs[0];
+
+      if (!msg?.media || !(msg.media instanceof Api.MessageMediaPoll)) {
+        return reply.status(404).send({ error: "Poll not found" });
+      }
+
+      const { poll } = msg.media;
+      if (poll.closed) {
+        return reply.status(400).send({ error: "Poll is closed" });
+      }
+
+      // A vote can't be taken back from here, so a second one would be a
+      // silent no-op on Telegram's side. Say so instead.
+      const current = await personalizedResults(client, chatId, msgId, msg.media);
+      if (current.results?.some((r) => r.chosen)) {
+        return reply.status(400).send({ error: "Already voted" });
+      }
+
+      if (chosen.length === 0) {
+        return reply.status(400).send({ error: "No option selected" });
+      }
+      if (!poll.multipleChoice && chosen.length > 1) {
+        return reply.status(400).send({ error: "This poll takes a single answer" });
+      }
+      if (chosen.some((i) => !Number.isInteger(i) || i < 0 || i >= poll.answers.length)) {
+        return reply.status(400).send({ error: "Unknown answer" });
+      }
+
+      try {
+        const updates = await client.invoke(
+          new Api.messages.SendVote({
+            peer: chatId,
+            msgId,
+            options: chosen.map((i) => poll.answers[i].option),
+          })
+        );
+        let voted = msg.media.results;
+        if ("updates" in updates) {
+          const upd = updates.updates.find(
+            (u): u is Api.UpdateMessagePoll => u instanceof Api.UpdateMessagePoll
+          );
+          if (upd?.results) voted = upd.results;
+        }
+        return pollPayload(poll, voted);
+      } catch (err) {
+        return reply
+          .status(400)
+          .send({ error: err instanceof Error ? err.message : "Vote failed" });
+      }
     }
   );
 

@@ -167,6 +167,7 @@ export interface PollResult {
   question: string;
   closed: boolean;
   quiz?: boolean;
+  multipleChoice?: boolean;
   answers: { text: string; voters: number; chosen?: boolean; correct?: boolean }[];
   totalVoters: number;
 }
@@ -179,6 +180,20 @@ export async function fetchPollResults(pollUrl: string): Promise<PollResult | nu
   } catch {
     return null;
   }
+}
+
+export async function votePoll(pollUrl: string, options: number[]): Promise<PollResult> {
+  const res = await fetch(`${pollUrl}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ options }),
+  });
+  if (!res.ok) {
+    // The server explains why a vote was refused (closed, already voted, …).
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error ?? `vote failed: ${res.status}`);
+  }
+  return res.json();
 }
 
 export interface ReplyItem {

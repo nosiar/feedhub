@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, type MouseEvent, type ReactNode } from "react";
 import type { FeedItem } from "../api.js";
-import { fetchOgPreview, fetchGmailBody, fetchNaverBody, fetchPollResults, fetchReplies, type PollResult, type ReplyItem } from "../api.js";
+import { fetchOgPreview, fetchGmailBody, fetchNaverBody, fetchPollResults, fetchReplies, votePoll, type PollResult, type ReplyItem } from "../api.js";
 
 // --- Chat-like sources: kakaotalk, telegram (expand to show full content) ---
 const CHAT_SOURCES = new Set(["kakaotalk", "telegram"]);
@@ -292,6 +292,9 @@ function PollCard({ pollUrl, poll, expanded }: {
   const [results, setResults] = useState<PollResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [voting, setVoting] = useState(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!expanded || fetched) return;
@@ -305,6 +308,34 @@ function PollCard({ pollUrl, poll, expanded }: {
   const hasResults = totalVoters > 0;
   const isQuiz = results?.quiz ?? false;
   const voted = answers.some((a) => a.chosen);
+  const multipleChoice = results?.multipleChoice ?? false;
+  // A vote can't be taken back from the feed, so the poll only opens up while
+  // this account has not voted yet.
+  const canVote = expanded && !!results && !results.closed && !voted;
+
+  const toggle = (i: number) => {
+    if (!canVote || voting) return;
+    setVoteError(null);
+    setSelected((prev) =>
+      multipleChoice
+        ? prev.includes(i) ? prev.filter((n) => n !== i) : [...prev, i]
+        : [i]
+    );
+  };
+
+  const submit = async () => {
+    if (voting || selected.length === 0) return;
+    setVoting(true);
+    setVoteError(null);
+    try {
+      setResults(await votePoll(pollUrl, [...selected].sort((a, b) => a - b)));
+      setSelected([]);
+    } catch (err) {
+      setVoteError(err instanceof Error ? err.message : "투표 실패");
+    } finally {
+      setVoting(false);
+    }
+  };
 
   return (
     <div
@@ -321,12 +352,19 @@ function PollCard({ pollUrl, poll, expanded }: {
         const barColor = a.chosen
           ? isQuiz ? (a.correct ? "#d6f0d8" : "#fadbd9") : "#c2dbfe"
           : isQuiz && a.correct ? "#e6f4ea" : "#e8f0fe";
-        const marker = a.chosen
-          ? isQuiz ? (a.correct ? "✓" : "✗") : "✓"
-          : isQuiz && a.correct ? "✓" : "";
+        const picked = selected.includes(i);
+        const marker = canVote
+          ? multipleChoice ? (picked ? "☑" : "☐") : (picked ? "●" : "○")
+          : a.chosen
+            ? isQuiz ? (a.correct ? "✓" : "✗") : "✓"
+            : isQuiz && a.correct ? "✓" : "";
         const markerColor = a.chosen && isQuiz && !a.correct ? "#d93025" : "#1a73e8";
         return (
-          <div key={i} style={{ marginBottom: 4, position: "relative" }}>
+          <div
+            key={i}
+            onClick={() => toggle(i)}
+            style={{ marginBottom: 4, position: "relative", cursor: canVote ? "pointer" : "default" }}
+          >
             {hasResults && (
               <div style={{
                 position: "absolute", top: 0, left: 0, height: "100%",
@@ -334,7 +372,7 @@ function PollCard({ pollUrl, poll, expanded }: {
               }} />
             )}
             <div style={{ position: "relative", padding: "6px 10px", fontSize: 13, display: "flex", justifyContent: "space-between", gap: 8 }}>
-              <span style={{ minWidth: 0, fontWeight: a.chosen ? 600 : 400 }}>
+              <span style={{ minWidth: 0, fontWeight: a.chosen || picked ? 600 : 400 }}>
                 {marker && <span style={{ color: markerColor, marginRight: 5, fontWeight: 700 }}>{marker}</span>}
                 {a.text}
               </span>
@@ -343,6 +381,24 @@ function PollCard({ pollUrl, poll, expanded }: {
           </div>
         );
       })}
+      {canVote && (
+        <button
+          onClick={submit}
+          disabled={voting || selected.length === 0}
+          style={{
+            marginTop: 6, width: "100%", padding: "7px 0",
+            background: selected.length === 0 ? "#f1f3f4" : "#1a73e8",
+            color: selected.length === 0 ? "#9aa0a6" : "#fff",
+            border: "none", borderRadius: 6, fontSize: 13, fontWeight: 600,
+            cursor: voting || selected.length === 0 ? "default" : "pointer",
+          }}
+        >
+          {voting ? "투표 중..." : "투표"}
+        </button>
+      )}
+      {voteError && (
+        <div style={{ fontSize: 11, color: "#d93025", marginTop: 6 }}>{voteError}</div>
+      )}
       <div style={{ fontSize: 11, color: "#999", marginTop: 6 }}>
         {loading ? "결과 불러오는 중..." : hasResults ? `👥 ${totalVoters}명 투표` : "투표 결과 없음"}
         {voted && " · 내가 투표함"}
