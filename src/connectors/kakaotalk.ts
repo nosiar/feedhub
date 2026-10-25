@@ -51,6 +51,20 @@ function isHttpUrl(value: unknown): value is string {
   return typeof value === "string" && /^https?:\/\//i.test(value);
 }
 
+// KakaoTalk open-chat "feed" events (member join/leave, deleted messages, …)
+// arrive as a message whose text is a JSON object carrying a top-level
+// feedType and no human-readable content. Drop these from the feed.
+function isFeedMessage(text: string | undefined): boolean {
+  const t = text?.trim();
+  if (!t || !t.startsWith("{") || !t.includes('"feedType"')) return false;
+  try {
+    const o = JSON.parse(t);
+    return o !== null && typeof o === "object" && "feedType" in o;
+  } catch {
+    return false;
+  }
+}
+
 function extOf(url: string): string {
   try {
     const path = new URL(url).pathname;
@@ -236,6 +250,7 @@ export class KakaotalkConnector implements Connector {
             },
           } satisfies FeedItem,
           msgId: msg.id,
+          skip: isFeedMessage(msg.text),
         }));
       }),
     );
@@ -250,9 +265,10 @@ export class KakaotalkConnector implements Connector {
         console.error(`[kakaotalk] chat "${chat.name}" (${chat.id}) sync failed:`, result.reason);
         return;
       }
-      for (const { item, msgId } of result.value) {
-        allItems.push(item);
+      for (const { item, msgId, skip } of result.value) {
+        // Advance the cursor past feed events too, so they are not re-fetched.
         if (BigInt(msgId) > BigInt(maxId)) maxId = msgId;
+        if (!skip) allItems.push(item);
       }
     });
 

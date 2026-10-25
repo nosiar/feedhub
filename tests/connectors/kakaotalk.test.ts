@@ -82,6 +82,47 @@ describe("KakaotalkConnector", () => {
     expect(result.items).toHaveLength(0);
   });
 
+  it("drops feedType system-feed messages but advances the cursor past them", async () => {
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        (cb as (e: Error | null, s: string) => void)(null, JSON.stringify([
+          { id: "100", chat_id: "chat-1", sender_id: "s", sender: "Kim",
+            text: "Hello", type: "text", is_from_me: false,
+            timestamp: "2026-04-03T10:00:00Z" },
+          { id: "101", chat_id: "chat-1", sender_id: "s", sender: "지애",
+            text: '{"feedType":6,"member":{"userId":8640162047390971656,"nickName":"지애"}}',
+            type: "feed", is_from_me: false, timestamp: "2026-04-03T10:05:00Z" },
+          { id: "102", chat_id: "chat-1", sender_id: "s", sender: "",
+            text: '{"feedType":4,"members":[{"userId":1,"nickName":"리가"}]}',
+            type: "feed", is_from_me: false, timestamp: "2026-04-03T10:06:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const connector = new KakaotalkConnector("kakaocli", [{ id: "chat-1", name: "A" }]);
+    const result = await connector.sync(null);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ id: "100", body: "Hello" });
+    expect(result.newCursor).toBe("102");
+  });
+
+  it("keeps a normal message whose text merely mentions feedType", async () => {
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        (cb as (e: Error | null, s: string) => void)(null, JSON.stringify([
+          { id: "200", chat_id: "chat-1", sender_id: "s", sender: "Kim",
+            text: "feedType 이게 뭐야?", type: "text", is_from_me: false,
+            timestamp: "2026-04-03T10:00:00Z" },
+        ]));
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const connector = new KakaotalkConnector("kakaocli", [{ id: "chat-1", name: "A" }]);
+    const result = await connector.sync(null);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].body).toBe("feedType 이게 뭐야?");
+  });
+
   it("throws and logs when every chat fetch fails", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockExecFile.mockImplementation(
