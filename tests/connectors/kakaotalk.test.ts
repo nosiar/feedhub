@@ -81,6 +81,53 @@ describe("KakaotalkConnector", () => {
     const result = await connector.sync(null);
     expect(result.items).toHaveLength(0);
   });
+
+  it("throws and logs when every chat fetch fails", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockExecFile.mockImplementation(
+      (_cmd, _args, _opts, cb: unknown) => {
+        (cb as (e: Error | null, s: string) => void)(new Error("dyld: libsqlcipher missing"), "");
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const connector = new KakaotalkConnector("kakaocli", [
+      { id: "chat-1", name: "A" },
+      { id: "chat-2", name: "B" },
+    ]);
+    await expect(connector.sync(null)).rejects.toThrow(/all 2 chat\(s\) failed/);
+    expect(errSpy).toHaveBeenCalledTimes(2);
+    errSpy.mockRestore();
+  });
+
+  it("keeps surviving chats and logs when only some fail", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockExecFile.mockImplementation(
+      (_cmd, args: readonly string[] | undefined, _opts: unknown, cb: unknown) => {
+        const callback = cb as (e: Error | null, s: string) => void;
+        const chatId = args?.[args.indexOf("--chat-id") + 1];
+        if (chatId === "chat-2") {
+          callback(new Error("boom"), "");
+        } else {
+          callback(null, JSON.stringify([
+            { id: "100", chat_id: "chat-1", sender_id: "s", sender: "Kim",
+              text: "Hello", type: "text", is_from_me: false,
+              timestamp: "2026-04-03T10:00:00Z" },
+          ]));
+        }
+        return {} as ReturnType<typeof execFile>;
+      },
+    );
+    const connector = new KakaotalkConnector("kakaocli", [
+      { id: "chat-1", name: "A" },
+      { id: "chat-2", name: "B" },
+    ]);
+    const result = await connector.sync(null);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ body: "Hello" });
+    expect(result.newCursor).toBe("100");
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    errSpy.mockRestore();
+  });
 });
 
 describe("KakaotalkConnector image rewrite", () => {

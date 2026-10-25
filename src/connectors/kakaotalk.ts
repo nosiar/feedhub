@@ -242,12 +242,25 @@ export class KakaotalkConnector implements Connector {
 
     const allItems: FeedItem[] = [];
     let maxId = cursor ?? "0";
-    for (const result of results) {
-      if (result.status !== "fulfilled") continue;
+    let failed = 0;
+    results.forEach((result, i) => {
+      if (result.status !== "fulfilled") {
+        failed++;
+        const chat = this.chats[i];
+        console.error(`[kakaotalk] chat "${chat.name}" (${chat.id}) sync failed:`, result.reason);
+        return;
+      }
       for (const { item, msgId } of result.value) {
         allItems.push(item);
         if (BigInt(msgId) > BigInt(maxId)) maxId = msgId;
       }
+    });
+
+    // Every chat failing means the kakaocli call itself is broken (missing
+    // binary, unreadable DB) rather than "no new messages" — surface it so the
+    // scheduler logs an error and the cursor is not advanced past the gap.
+    if (failed > 0 && failed === this.chats.length) {
+      throw new Error(`[kakaotalk] all ${failed} chat(s) failed to sync`);
     }
 
     await mapWithConcurrency(allItems, ITEM_CONCURRENCY, (item) => rewriteImagesForItem(item));
