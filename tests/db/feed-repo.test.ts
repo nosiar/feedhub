@@ -106,14 +106,25 @@ describe("feed-repo", () => {
   });
 
   describe("setPinned", () => {
-    it("updates the pinned flag for the given item", async () => {
-      const updateOne = vi.fn().mockResolvedValue({});
+    it("pins only items that are not dismissed", async () => {
+      const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1 });
       mockCollection.updateOne = updateOne;
       const { setPinned } = await import("../../src/db/feed-repo.js");
-      await setPinned("rss", "rss-3", true);
+      expect(await setPinned("rss", "rss-3", true)).toBe(true);
+      expect(updateOne).toHaveBeenCalledWith(
+        { source: "rss", id: "rss-3", dismissed: { $ne: true } },
+        { $set: { pinned: true } }
+      );
+    });
+
+    it("unpins without the dismissed guard", async () => {
+      const updateOne = vi.fn().mockResolvedValue({ matchedCount: 1 });
+      mockCollection.updateOne = updateOne;
+      const { setPinned } = await import("../../src/db/feed-repo.js");
+      await setPinned("rss", "rss-3", false);
       expect(updateOne).toHaveBeenCalledWith(
         { source: "rss", id: "rss-3" },
-        { $set: { pinned: true } }
+        { $set: { pinned: false } }
       );
     });
   });

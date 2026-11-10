@@ -78,4 +78,18 @@ describe("PUT /api/feed/pin with kakao image expireAt toggle", () => {
     });
     expect(wrongType.statusCode).toBe(400);
   });
+
+  it("returns 409 when pinning a dismissed item and leaves it unpinned", async () => {
+    await db.collection("feed_items").insertOne({
+      id: "gone", source: "rss", title: "T", body: "B", author: "A",
+      timestamp: new Date(), metadata: {}, dismissed: true, pinned: false,
+    });
+    const res = await app.inject({
+      method: "PUT", url: "/api/feed/pin",
+      payload: { source: "rss", id: "gone", pinned: true },
+    });
+    expect(res.statusCode).toBe(409);
+    const item = await db.collection("feed_items").findOne({ id: "gone" });
+    expect(item?.pinned).toBe(false);
+  });
 });

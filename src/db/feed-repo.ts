@@ -26,11 +26,22 @@ export async function upsertFeedItems(
   };
 }
 
-export async function dismissFeedItem(source: SourceType, id: string): Promise<void> {
+// Pinned and dismissed are mutually exclusive; the guard lives in the filter so a
+// concurrent pin/dismiss can't both win. Returns false when the guard blocked it.
+export async function dismissFeedItem(source: SourceType, id: string): Promise<boolean> {
+  const db = await getDb();
+  const r = await db.collection(COLLECTION).updateOne(
+    { source, id, pinned: { $ne: true } },
+    { $set: { dismissed: true } }
+  );
+  return r.matchedCount > 0;
+}
+
+export async function undismissFeedItem(source: SourceType, id: string): Promise<void> {
   const db = await getDb();
   await db.collection(COLLECTION).updateOne(
     { source, id },
-    { $set: { dismissed: true } }
+    { $set: { dismissed: false } }
   );
 }
 
@@ -38,12 +49,12 @@ export async function setPinned(
   source: SourceType,
   id: string,
   pinned: boolean
-): Promise<void> {
+): Promise<boolean> {
   const db = await getDb();
-  await db.collection(COLLECTION).updateOne(
-    { source, id },
-    { $set: { pinned } }
-  );
+  const filter: Record<string, unknown> = { source, id };
+  if (pinned) filter.dismissed = { $ne: true };
+  const r = await db.collection(COLLECTION).updateOne(filter, { $set: { pinned } });
+  return r.matchedCount > 0;
 }
 
 export async function getFeedItem(
@@ -102,4 +113,31 @@ export async function searchFeed(
     .sort({ timestamp: -1 })
     .limit(opts.limit ?? 20)
     .toArray();
+}
+
+const PURGE_BATCH = 1000;
+
+// Dismissed docs double as "already seen" markers, so only purge items old enough
+// that no connector cursor will fetch them again.
+export async function purgeDismissedFeedItems(olderThan: Date): Promise<number> {
+  const db = await getDb();
+  const col = db.collection(COLLECTION);
+  const filter = { dismissed: true, pinned: { $ne: true }, timestamp: { $lt: olderThan } };
+  let deleted = 0;
+  for (;;) {
+    const batch = await col
+      .find(filter, { projection: { _id: 1, source: 1, id: 1 } })
+      .limit(PURGE_BATCH)
+      .toArray();
+    if (batch.length === 0) return deleted;
+    const kakaoIds = batch.filter((d) => d.source === "kakaotalk").map((d) => d.id);
+    if (kakaoIds.length > 0) {
+      await db.collection("kakao_images").deleteMany({
+        source: "kakaotalk",
+        feedItemId: { $in: kakaoIds },
+      });
+    }
+    const r = await col.deleteMany({ _id: { $in: batch.map((d) => d._id) } });
+    deleted += r.deletedCount ?? 0;
+  }
 }

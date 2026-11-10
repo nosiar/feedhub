@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { SourceType } from "../../connectors/types.js";
-import { setPinned } from "../../db/feed-repo.js";
+import { getFeedItem, setPinned } from "../../db/feed-repo.js";
 import {
   pinKakaoImagesByFeedItem,
   unpinKakaoImagesByFeedItem,
@@ -18,7 +18,10 @@ export function pinRoutes(app: FastifyInstance): void {
     if (!source || !id || typeof pinned !== "boolean") {
       return reply.status(400).send({ error: "invalid body" });
     }
-    await setPinned(source, id, pinned);
+    const updated = await setPinned(source, id, pinned);
+    if (!updated && pinned && (await getFeedItem(source, id))?.dismissed) {
+      return reply.status(409).send({ error: "dismissed" });
+    }
     if (source === "kakaotalk") {
       if (pinned) await pinKakaoImagesByFeedItem(id);
       else await unpinKakaoImagesByFeedItem(id);

@@ -17,6 +17,7 @@ export interface FeedItem {
   timestamp: Date;
   metadata: Record<string, unknown>;
   pinned?: boolean;
+  dismissed?: boolean;
 }
 
 export interface SyncCursor {

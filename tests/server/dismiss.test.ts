@@ -97,4 +97,25 @@ describe("DELETE /api/feed/dismiss pinned guard", () => {
     // Image not cascaded
     expect(await db.collection("kakao_images").countDocuments()).toBe(1);
   });
+
+  it("rolls back the dismiss when the remote trash call fails", async () => {
+    const { GmailConnector } = await import("../../src/connectors/gmail.js");
+    const gmail = Object.create(GmailConnector.prototype);
+    gmail.trash = async () => { throw new Error("gmail down"); };
+    const failing = Fastify({ logger: false });
+    dismissRoutes(failing, new Map([["gmail", gmail]]));
+    await failing.ready();
+
+    await upsertFeedItems([{
+      id: "mail-1", source: "gmail", title: "T", body: "B", author: "A",
+      timestamp: new Date(), metadata: {},
+    }]);
+    const res = await failing.inject({ method: "DELETE", url: "/api/feed/dismiss?source=gmail&id=mail-1" });
+    await failing.close();
+
+    expect(res.statusCode).toBe(500);
+    const item = await db.collection("feed_items").findOne({ id: "mail-1" });
+    expect(item?.dismissed).toBe(false);
+  });
 });
+
