@@ -4,6 +4,7 @@ import { getDb, closeDb } from "./db/client.js";
 import { ensureIndexes } from "./db/indexes.js";
 import { buildApp } from "./server/app.js";
 import { startScheduler } from "./scheduler.js";
+import { startPurgeScheduler } from "./purge.js";
 import { getSettings } from "./db/settings-repo.js";
 import { buildConnectors } from "./connectors/registry.js";
 import type { Connector, SourceType } from "./connectors/types.js";
@@ -26,6 +27,7 @@ async function main() {
 
   const app = buildApp(connectors, onSettingsChanged);
   startScheduler(connectors, config.syncInterval);
+  startPurgeScheduler();
 
   await app.listen({ port: config.port, host: "0.0.0.0" });
   console.log(`[feedhub] Server running at http://localhost:${config.port}`);
